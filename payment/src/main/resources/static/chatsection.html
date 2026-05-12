@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+  <head>
+    <title>WebSocket Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: auto;
+      }
+      .chat-section {
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      ul {
+        list-style-type: none;
+        padding: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        padding: 5px;
+      }
+      li {
+        background: #eee;
+        margin: 5px 0;
+        padding: 8px;
+        border-radius: 3px;
+      }
+      .form-group {
+        margin-bottom: 10px;
+      }
+      input[type="text"] {
+        padding: 8px;
+        width: calc(100% - 130px);
+        margin-right: 5px;
+      }
+      button {
+        padding: 8px 15px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>WebSocket Chat Test</h2>
+
+    <div class="chat-section">
+      <h3>Connection</h3>
+      <p id="connection-status" style="color: red; font-weight: bold">
+        Disconnected
+      </p>
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="chat-section">
+      <h3>Public Chat (Broadcast to all)</h3>
+      <div class="form-group">
+        <input
+          type="text"
+          id="public-message"
+          placeholder="Type a public message..."
+        />
+        <button onclick="sendPublicMessage()">Send Publicly</button>
+      </div>
+      <ul id="public-messages"></ul>
+    </div>
+
+    <div class="chat-section">
+      <h3>Private Chat</h3>
+      <div class="form-group">
+        <input
+          type="text"
+          id="private-receiver"
+          placeholder="Receiver username (who you are sending to)"
+          style="width: 100%; margin-bottom: 10px"
+        />
+      </div>
+      <div class="form-group">
+        <input
+          type="text"
+          id="private-message"
+          placeholder="Type a private message..."
+        />
+        <button onclick="sendPrivateMessage()">Send Privately</button>
+      </div>
+      <ul id="private-messages"></ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <script>
+      let stompClient = null;
+
+      function connect() {
+        const token = localStorage.getItem("jwtToken") || "";
+
+        const socket = new SockJS("http://localhost:8080/ws?token=" + token);
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect(
+          {
+            Authorization: "Bearer " + token,
+          },
+          function (frame) {
+            console.log("Connected: " + frame);
+            updateConnectionStatus("Connected", "green");
+
+            // Subscribe to Public Messages
+            stompClient.subscribe("/topic/messages", function (response) {
+              // Your public endpoint returns a plain string
+              displayPublicMessage(response.body);
+            });
+
+            // Subscribe to Private Messages specifically for this user
+            stompClient.subscribe(
+              "/user/queue/private-messages",
+              function (response) {
+                // Your private endpoint sends a ChatMessage object
+                const messageObj = JSON.parse(response.body);
+                displayPrivateMessage(messageObj.sender, messageObj.content);
+              },
+            );
+          },
+          function (error) {
+            console.error("Error connecting: " + error);
+            updateConnectionStatus("Connection Failed", "red");
+          },
+        );
+      }
+
+      function disconnect() {
+        if (stompClient !== null) {
+          stompClient.disconnect();
+        }
+        updateConnectionStatus("Disconnected", "red");
+        console.log("Disconnected");
+      }
+
+      function updateConnectionStatus(status, color) {
+        const el = document.getElementById("connection-status");
+        el.innerText = status;
+        el.style.color = color;
+      }
+
+      function sendPublicMessage() {
+        const messageInput = document.getElementById("public-message").value;
+        if (messageInput && stompClient && stompClient.connected) {
+          // Sends a simple string as expected by your ChatController testMessage method
+          stompClient.send("/app/hello", {}, messageInput);
+          document.getElementById("public-message").value = ""; // clear input
+        } else {
+          alert("Connect first or enter a message.");
+        }
+      }
+
+      function displayPublicMessage(messageContent) {
+        const li = document.createElement("li");
+        li.innerText = messageContent;
+        document.getElementById("public-messages").appendChild(li);
+      }
+
+      function sendPrivateMessage() {
+        const receiver = document.getElementById("private-receiver").value;
+        const content = document.getElementById("private-message").value;
+
+        if (receiver && content && stompClient && stompClient.connected) {
+          const username = localStorage.getItem("username") || "Unknown";
+
+          const chatMessage = {
+            type: "CHAT",
+            content: content,
+            sender: username,
+            receiver: receiver,
+          };
+
+          stompClient.send(
+            "/app/private-message",
+            {
+            },
+            JSON.stringify(chatMessage),
+          );
+
+          // Display your own sent message locally so you can see what you sent
+          displayPrivateMessage(username + " to " + receiver, content);
+
+          document.getElementById("private-message").value = ""; // clear input
+        } else {
+          alert(
+            "Please ensure you are connected and have entered both receiver and message.",
+          );
+        }
+      }
+
+      function displayPrivateMessage(sender, content) {
+        const li = document.createElement("li");
+        li.innerText = sender + ": " + content;
+        li.style.backgroundColor = "#e6f7ff"; // light blue for private msgs
+        li.style.borderLeft = "4px solid #1890ff";
+        document.getElementById("private-messages").appendChild(li);
+      }
+
+      // Automatically connect on page load if token is present
+      window.onload = connect;
+    </script>
+  </body>
+</html>

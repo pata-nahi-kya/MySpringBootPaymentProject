@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment System - Make Payment</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .payment-container {
+        background-color: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: 400px;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+        font-weight: bold;
+      }
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        box-sizing: border-box;
+      }
+      input:focus {
+        outline: none;
+        border-color: #4caf50;
+        box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+      }
+      button {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .submit-btn {
+        background-color: #4caf50;
+        color: white;
+      }
+      .submit-btn:hover {
+        background-color: #45a049;
+      }
+      .cancel-btn {
+        background-color: #f44336;
+        color: white;
+      }
+      .cancel-btn:hover {
+        background-color: #d32f2f;
+      }
+      .message {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="payment-container">
+      <h1>Make a Payment</h1>
+      <form id="paymentForm">
+        <div class="form-group">
+          <label for="receiverId">Receiver Account ID:</label>
+          <input
+            type="number"
+            id="receiverId"
+            placeholder="Enter receiver's account ID"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Amount ($):</label>
+          <input
+            type="number"
+            id="amount"
+            placeholder="Enter amount to transfer"
+            min="1"
+            step="0.01"
+            required
+          />
+        </div>
+
+        <div class="button-group">
+          <button type="button" class="cancel-btn" onclick="goBack()">
+            Cancel
+          </button>
+          <button type="submit" class="submit-btn">Process Payment</button>
+        </div>
+      </form>
+
+      <div id="message" class="message" style="display: none"></div>
+    </div>
+
+    <script>
+      // Check if user is logged in
+      const token = localStorage.getItem("jwtToken");
+      if (!token) {
+        window.location.href = "index.html";
+      }
+
+      document
+        .getElementById("paymentForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const receiverId = document.getElementById("receiverId").value;
+          const amount = document.getElementById("amount").value;
+
+          // First, get current user details to get sender ID
+          try {
+            const userResponse = await fetch("/bank/user/current", {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (!userResponse.ok) {
+              throw new Error("Failed to get user details");
+            }
+
+            const userData = await userResponse.json();
+            const senderId = userData.id;
+
+            // Now process the payment
+            const paymentResponse = await fetch(
+              `/bank/user/moneyTransfer/${receiverId}/${senderId}/${amount}`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+              },
+            );
+
+            const messageDiv = document.getElementById("message");
+
+            if (paymentResponse.ok) {
+              const result = await paymentResponse.json();
+              messageDiv.className = "message success";
+              messageDiv.textContent = `Payment successful! Transfer completed.`;
+              messageDiv.style.display = "block";
+
+              // Clear form
+              document.getElementById("paymentForm").reset();
+
+              // Redirect to dashboard after 3 seconds
+              setTimeout(() => {
+                window.location.href = "dashboard.html";
+              }, 3000);
+            } else {
+              const errorData = await paymentResponse.json();
+              messageDiv.className = "message error";
+              messageDiv.textContent =
+                errorData.message ||
+                "Payment failed. Please check the details and try again.";
+              messageDiv.style.display = "block";
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            const messageDiv = document.getElementById("message");
+            messageDiv.className = "message error";
+            messageDiv.textContent = "An error occurred. Please try again.";
+            messageDiv.style.display = "block";
+          }
+        });
+
+      function goBack() {
+        window.location.href = "dashboard.html";
+      }
+    </script>
+  </body>
+</html>
