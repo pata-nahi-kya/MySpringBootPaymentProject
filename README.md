@@ -51,15 +51,13 @@ allproject/
 
 ## Usage
 
-[Add usage instructions here]
+I have created this repository to test my knowledge in spring boot.
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
 
-[Specify your project license here]
 
 ## Contact
 
