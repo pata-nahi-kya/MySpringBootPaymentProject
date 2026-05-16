@@ -79,6 +79,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/index.html", "/dashboard.html", "/makePayment.html",
                                 "/chatsection.html", "/ws/**")
                         .permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/bank/admin/createUser").permitAll()
                         .requestMatchers("/bank/admin/authenticate/**").permitAll()
 

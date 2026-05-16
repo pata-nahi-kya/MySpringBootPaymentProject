@@ -99,7 +99,7 @@
       function connect() {
         const token = localStorage.getItem("jwtToken") || "";
 
-        const socket = new SockJS("http://localhost:8080/ws?token=" + token);
+        const socket = new SockJS("http://localhost:8080/ws");
         stompClient = Stomp.over(socket);
 
         stompClient.connect(
@@ -151,7 +151,9 @@
         const messageInput = document.getElementById("public-message").value;
         if (messageInput && stompClient && stompClient.connected) {
           // Sends a simple string as expected by your ChatController testMessage method
-          stompClient.send("/app/hello", {}, messageInput);
+          stompClient.send("/app/hello", {
+            Authorization : "Bearer " + (localStorage.getItem("jwtToken") || ""),
+          }, messageInput);
           document.getElementById("public-message").value = ""; // clear input
         } else {
           alert("Connect first or enter a message.");
@@ -180,8 +182,7 @@
 
           stompClient.send(
             "/app/private-message",
-            {
-            },
+            {},
             JSON.stringify(chatMessage),
           );
 

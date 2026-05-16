@@ -5,12 +5,15 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.paymentproject.payment.ServiceStructureImplementation.ssImplementation;
 import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
+import com.paymentproject.payment.dto.TransferDTO;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -52,8 +55,9 @@ public class UserController {
      * @param amount The amount of money to add
      * @return Updated customer information as DTO
      */
+    //this make no sense but i am just doing it for the sake of learning
     @PutMapping("/addMoney/{id}/{amount}")
-    public CustomerDTO addMoney(@PathVariable int id, @PathVariable int amount) {
+    public CustomerDTO addMoney(@PathVariable int id, @PathVariable double amount) {
         return customerMapper.toDto(ss.addMoney(amount, id));
     }
 
@@ -70,14 +74,15 @@ public class UserController {
     /**
      * Transfer money between two user accounts
      * 
-     * @param idr    ID of the receiver's account
-     * @param ids    ID of the sender's account
-     * @param amount Amount of money to transfer
+     * @param transferDTO DTO containing sender, receiver and amount information
      * @return Updated sender's account information as DTO
      */
-    @PutMapping("/moneyTransfer/{idr}/{ids}/{amount}")
-    public CustomerDTO transferMoney(@PathVariable int idr, @PathVariable int ids, @PathVariable int amount) {
-        return customerMapper.toDto(ss.transferMoney(amount, idr, ids));
+    @PostMapping("/moneyTransfer")
+    public CustomerDTO transferMoney(@RequestBody TransferDTO transferDTO) {
+        return customerMapper.toDto(ss.transferMoney(
+                transferDTO.getAmount(),
+                transferDTO.getReceiverId(),
+                transferDTO.getSenderId()));
     }
 
     /**

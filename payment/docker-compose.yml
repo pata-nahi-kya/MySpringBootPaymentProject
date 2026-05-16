@@ -1,0 +1,47 @@
+
+services:
+
+  mysql:
+
+    image: mysql:8
+
+    container_name: payment-mysql
+
+    restart: always
+
+    environment:
+
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: paymentschema
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  app:
+
+    build: .
+
+    container_name: payment-app
+
+    restart: always
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - mysql
+
+    environment:
+
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentschema
+
+      SPRING_DATASOURCE_USERNAME: root
+
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+
+volumes:
+
+  mysql_data:

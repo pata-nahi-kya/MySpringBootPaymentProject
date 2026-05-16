@@ -34,7 +34,7 @@ public interface ServiceStructure {
      * @param si     Sender's account ID
      * @return Updated sender's account information
      */
-    customerInfo transferMoney(int amount, int ri, int si);
+    customerInfo transferMoney(double amount, int ri, int si);
 
     /**
      * Add money to a customer's account
@@ -43,7 +43,7 @@ public interface ServiceStructure {
      * @param id     Customer's account ID
      * @return Updated customer information
      */
-    customerInfo addMoney(int amount, int id);
+    customerInfo addMoney(double amount, int id);
 
     /**
      * Delete a user from the system

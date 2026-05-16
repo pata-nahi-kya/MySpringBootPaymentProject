@@ -30,7 +30,7 @@ public class CustomerDTO {
     /**
      * Customer's account balance
      */
-    private int money;
+    private double money;
 
     /**
      * Set of roles assigned to the customer

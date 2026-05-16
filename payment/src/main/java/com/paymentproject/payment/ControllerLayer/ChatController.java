@@ -20,7 +20,10 @@ public class ChatController {
     private SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/private-message")
-    public void handlePrivateMessage(ChatMessage message) {
+    public void handlePrivateMessage(ChatMessage message , Principal principal) {
+        String sender = principal.getName();
+        // Log the received message and sender
+        System.out.println("Received private message from " + sender + ": " + message.getContent());
         messagingTemplate.convertAndSendToUser(message.getReceiver(), "/queue/private-messages", message);
     }
 

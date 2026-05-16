@@ -115,7 +115,7 @@
             id="amount"
             placeholder="Enter amount to transfer"
             min="1"
-            step="0.01"
+            step="1"
             required
           />
         </div>
@@ -162,18 +162,21 @@
 
             const userData = await userResponse.json();
             const senderId = userData.id;
+            const payload = {
+              senderId: Number(senderId),
+              receiverId: Number(receiverId),
+              amount: Number(amount),
+            };
 
             // Now process the payment
-            const paymentResponse = await fetch(
-              `/bank/user/moneyTransfer/${receiverId}/${senderId}/${amount}`,
-              {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
+            const paymentResponse = await fetch(`/bank/user/moneyTransfer`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
               },
-            );
+              body: JSON.stringify(payload),
+            });
 
             const messageDiv = document.getElementById("message");
 

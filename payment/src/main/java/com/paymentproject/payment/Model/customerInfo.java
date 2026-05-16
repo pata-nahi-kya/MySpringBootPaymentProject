@@ -55,7 +55,7 @@ public class customerInfo {
      * Customer's account balance
      */
     @Column
-    int money;
+    double money;
 
     /**
      * Customer's hashed password

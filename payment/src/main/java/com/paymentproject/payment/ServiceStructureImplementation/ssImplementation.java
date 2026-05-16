@@ -31,12 +31,12 @@ public class ssImplementation implements ServiceStructure {
 
     @Override
     @Transactional
-    public customerInfo transferMoney(int amount, int ri, int si) {
+    public customerInfo transferMoney(double amount, int ri, int si) {
         customerInfo reciever = rp.getById(ri);
         customerInfo sender = rp.getById(si);
 
-        int presentMoney = reciever.getMoney() + amount;
-        int deductedMoney = sender.getMoney() - amount;
+        double presentMoney = reciever.getMoney() + amount;
+        double deductedMoney = sender.getMoney() - amount;
         reciever.setMoney(presentMoney);
         sender.setMoney(deductedMoney);
         rp.save(sender);
@@ -44,7 +44,7 @@ public class ssImplementation implements ServiceStructure {
     }
 
     @Override
-    public customerInfo addMoney(int amount, int id) {
+    public customerInfo addMoney(double amount, int id) {
         customerInfo ci = rp.findById(id).get();
 
         ci.setMoney(ci.getMoney() + amount);
@@ -88,5 +88,7 @@ public class ssImplementation implements ServiceStructure {
         }   
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
     }
+
+   
 
 }
