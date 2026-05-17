@@ -80,15 +80,21 @@ public class ssImplementation implements ServiceStructure {
     @Override
     public customerInfo getUserByUsername(String username) {
         // return rp.findByCustomerName(username)
-        //         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        // .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User
+        // not found"));
 
         customerInfo c = rp.findByCustomerName(username);
         if (c != null) {
             return c;
-        }   
+        }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
     }
 
-   
+    @Override
+    public List<customerInfo> bulkAddCustomers(List<customerInfo> customers) {
+        
+        customers.forEach(c -> c.setPassword(BCPE.encode(c.getPassword())));
+        return rp.saveAll(customers);
+    }
 
 }

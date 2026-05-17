@@ -13,6 +13,7 @@ import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
 import com.paymentproject.payment.dto.CustomerRegistrationDTO;
 import com.paymentproject.payment.dto.AuthenticationResponseDTO;
+import com.paymentproject.payment.Model.customerInfo;
 import com.paymentproject.payment.ServiceStructureImplementation.*;
 
 /**
@@ -77,6 +78,23 @@ public class AdminController {
     @PostMapping("/createUser")
     public CustomerDTO createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
         return customerMapper.toDto(ss.createUser(customerMapper.toEntity(registrationDTO)));
+    }
+
+    /**
+     * Bulk add users (admin only)
+     *
+     * @param registrations List of registration DTOs
+     * @return List of created users as DTOs
+     */
+    @PostMapping("/bulkAdd")
+    public List<CustomerDTO> bulkAdd(@RequestBody List<CustomerRegistrationDTO> registrations) {
+        List<customerInfo> entities = registrations.stream()
+                .map(customerMapper::toEntity)
+                .collect(Collectors.toList());
+
+        java.util.List<com.paymentproject.payment.Model.customerInfo> saved = ss.bulkAddCustomers(entities);
+
+        return saved.stream().map(customerMapper::toDto).collect(Collectors.toList());
     }
 
     /**

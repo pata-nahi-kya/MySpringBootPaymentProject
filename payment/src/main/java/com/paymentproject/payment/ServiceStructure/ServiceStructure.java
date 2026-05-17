@@ -75,4 +75,11 @@ public interface ServiceStructure {
      */
     customerInfo getUserByUsername(String username);
 
+    /**
+     * Bulk add multiple customers to the system (admin only)
+     * 
+     * @param customers List of customer entities to create
+     * @return List of created customer entities with generated IDs
+     */
+    List<customerInfo> bulkAddCustomers(List<customerInfo> customers);
 }
