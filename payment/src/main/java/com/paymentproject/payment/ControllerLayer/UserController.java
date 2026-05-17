@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.paymentproject.payment.Model.customerInfo;
 import com.paymentproject.payment.ServiceStructureImplementation.ssImplementation;
 import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
@@ -55,7 +58,7 @@ public class UserController {
      * @param amount The amount of money to add
      * @return Updated customer information as DTO
      */
-    //this make no sense but i am just doing it for the sake of learning
+    // this make no sense but i am just doing it for the sake of learning
     @PutMapping("/addMoney/{id}/{amount}")
     public CustomerDTO addMoney(@PathVariable int id, @PathVariable double amount) {
         return customerMapper.toDto(ss.addMoney(amount, id));
@@ -93,6 +96,7 @@ public class UserController {
      */
     @GetMapping("/getMyDetail/{id}")
     public CustomerDTO getMethodName(@PathVariable int id) {
+
         return customerMapper.toDto(ss.getMydetail(id));
     }
 
@@ -119,9 +123,42 @@ public class UserController {
      */
     @GetMapping("/current")
     public CustomerDTO getCurrentUser() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        UserDetails userDetails = (UserDetails) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        
+
         String username = userDetails.getUsername();
-        return customerMapper.toDto(ss.getUserByUsername(username));
+        System.out.println("Current user: " + username);
+
+        String key = "customer:" + username;
+        System.out.println("Checking Redis for key: " + key);
+
+        Object cached = ss.getFromRedis(key);
+
+        if (cached != null) {
+            System.out.println("Cache hit for key: " + key);
+
+            ObjectMapper mapper = new ObjectMapper();
+
+
+            CustomerDTO dto = mapper.convertValue(cached, CustomerDTO.class);
+            System.out.println("Returning cached data for user: " + username);
+
+            return dto;
+        }
+
+        System.out.println("Cache miss for key: " + key + ". Fetching from database.");
+        customerInfo currentUserInfo = ss.getUserByUsername(username);
+
+        CustomerDTO currentUser = customerMapper.toDto(currentUserInfo);
+
+        ss.saveToRedis(key, currentUser);
+
+        return currentUser;
     }
 
 }

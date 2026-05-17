@@ -47,7 +47,7 @@ public class CustomerMapper {
         customer.setCustomerName(dto.getCustomerName());
         customer.setPassword(dto.getPassword());
         customer.setRole(dto.getRole());
-        int money = dto.getMoney() > 0 ? dto.getMoney() : 0; // Ensure money is non-negative
+        double money = dto.getMoney() > 0 ? dto.getMoney() : 0; // Ensure money is non-negative
         customer.setMoney(money); // Set initial money to the validated value
         return customer;
     }

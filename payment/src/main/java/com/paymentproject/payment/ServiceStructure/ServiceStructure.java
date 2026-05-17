@@ -2,6 +2,8 @@ package com.paymentproject.payment.ServiceStructure;
 
 import java.util.List;
 
+
+
 import com.paymentproject.payment.Model.customerInfo;
 
 /**
@@ -82,4 +84,8 @@ public interface ServiceStructure {
      * @return List of created customer entities with generated IDs
      */
     List<customerInfo> bulkAddCustomers(List<customerInfo> customers);
+
+    void saveToRedis(String key, Object value);
+    Object getFromRedis(String key);
+    boolean existsInRedis(String key);
 }

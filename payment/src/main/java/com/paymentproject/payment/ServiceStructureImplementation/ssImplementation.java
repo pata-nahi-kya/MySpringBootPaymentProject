@@ -3,6 +3,8 @@ package com.paymentproject.payment.ServiceStructureImplementation;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +23,9 @@ public class ssImplementation implements ServiceStructure {
     repository rp;
 
     BCryptPasswordEncoder BCPE = new BCryptPasswordEncoder(10);
+
+    @Autowired
+    RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public customerInfo createUser(customerInfo cs) {
@@ -96,5 +101,26 @@ public class ssImplementation implements ServiceStructure {
         customers.forEach(c -> c.setPassword(BCPE.encode(c.getPassword())));
         return rp.saveAll(customers);
     }
+
+    @Override
+    public void saveToRedis(String key, Object value) {
+        String redisKey = "customerName:" + key;
+        redisTemplate.opsForValue().set(redisKey, value);
+    }
+
+
+    @Override
+    public Object getFromRedis(String key) {
+        String redisKey = "customerName:" + key;
+        return redisTemplate.opsForValue().get(redisKey);
+    }
+
+    @Override
+    public boolean existsInRedis(String key) {
+        String redisKey = "customerName:" + key;
+        return redisTemplate.hasKey(redisKey);
+    }
+
+    
 
 }

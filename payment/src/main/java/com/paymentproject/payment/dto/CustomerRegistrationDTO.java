@@ -31,7 +31,7 @@ public class CustomerRegistrationDTO {
     /**
      * Initial money for the customer (optional, can be set to 0 by default)
      */
-    private int money;
+    private double money;
 
     private Set<Role> role; // Optional: Set of roles to assign during registration (e.g., USER)
 

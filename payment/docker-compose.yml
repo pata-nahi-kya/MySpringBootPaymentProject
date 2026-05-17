@@ -1,8 +1,5 @@
-
 services:
-
   mysql:
-
     image: mysql:8
 
     container_name: payment-mysql
@@ -10,7 +7,6 @@ services:
     restart: always
 
     environment:
-
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: paymentschema
 
@@ -20,8 +16,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
-  app:
+  redis:
+    image: redis:7
+    container_name: payment-redis
+    ports:
+      - "6379:6379"
+    
 
+  app:
     build: .
 
     container_name: payment-app
@@ -33,9 +35,9 @@ services:
 
     depends_on:
       - mysql
+      - redis
 
     environment:
-
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentschema
 
       SPRING_DATASOURCE_USERNAME: root
@@ -43,5 +45,4 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
 
 volumes:
-
   mysql_data:

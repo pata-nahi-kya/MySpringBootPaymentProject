@@ -1,5 +1,7 @@
 package com.paymentproject.payment.ControllerLayer;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -17,6 +19,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
 
+    @Autowired  
+    RedisTemplate<String, Object> redisTemplate;
+
+
     /**
      * Serve login page as the home page
      * 
@@ -27,6 +33,9 @@ public class HomeController {
      */
     @GetMapping("/")
     public String home() {
+        // save something in redis to test redis connection
+        
+        redisTemplate.opsForValue().set("testKey", "Hello Redis!");
         return "forward:/index.html";
         
     }
