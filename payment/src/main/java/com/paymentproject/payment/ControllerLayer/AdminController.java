@@ -65,6 +65,7 @@ public class AdminController {
     @PostMapping("/createUser")
     public ResponseEntity<CustomerDTO> createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
         CustomerInfo entity = customerMapper.toEntity(registrationDTO);
+        entity.setPassword(registrationDTO.getPassword());
         CustomerDTO created = customerMapper.toDto(customerService.createUser(entity));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

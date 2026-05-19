@@ -114,7 +114,7 @@
     </div>
 
     <script>
-      const apiBase = "/bank";
+      
       let stompClient = null;
 
       async function verifySession() {
@@ -125,7 +125,7 @@
         }
 
         try {
-          await axios.get(`${apiBase}/user/current`, {
+          await axios.get(`/bank/user/current`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },

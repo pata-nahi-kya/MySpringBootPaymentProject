@@ -1,54 +1,76 @@
 package com.paymentproject.payment.dto;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 
 import com.paymentproject.payment.Model.CustomerInfo;
+import com.paymentproject.payment.Model.Role;
 
 /**
  * Customer Entity-DTO Mapper
  * 
- * This component handles the conversion between:
- * - Customer entities and DTOs
- * - Registration DTOs and entities
- * 
- * Key responsibilities:
- * - Mapping between different object types
- * - Protecting sensitive data during conversion
- * - Maintaining data consistency
- * 
- * Uses @Component for Spring dependency injection
+ * Handles bidirectional conversion between database entities and safe DTOs.
  */
 @Component
 public class CustomerMapper {
 
     /**
-     * Convert a customer entity to its DTO representation
-     * 
-     * @param customer The customer entity to convert
-     * @return DTO containing non-sensitive customer information
+     * Convert a CustomerInfo database entity into a safe CustomerDTO.
+     * Maps roles explicitly into pure Strings to detach Hibernate proxy connections.
      */
     public CustomerDTO toDto(CustomerInfo customer) {
+        if (customer == null) {
+            return null;
+        }
+
         CustomerDTO dto = new CustomerDTO();
         dto.setId(customer.getId());
-        dto.setCustomerName(customer.getCustomerName());
+        dto.setCustomerName(customer.getCustomerName()); 
         dto.setMoney(customer.getMoney());
-        dto.setRole(customer.getRole());
+        
+        if (customer.getRole() != null) {
+            Set<String> safeRoles = customer.getRole().stream()
+                    .map(Enum::name)
+                    .collect(Collectors.toSet());
+            dto.setRole(safeRoles); 
+        } else {
+            dto.setRole(new HashSet<>());
+        }
+
         return dto;
     }
 
     /**
-     * Convert a registration DTO to a customer entity
-     * 
-     * @param dto The registration DTO to convert
-     * @return New customer entity with initial values set
+     * Convert a Registration DTO into a CustomerInfo database entity.
+     * Safely maps role configurations to match your database field requirements.
      */
     public CustomerInfo toEntity(CustomerRegistrationDTO dto) {
-        CustomerInfo customer = new CustomerInfo();
-        customer.setCustomerName(dto.getCustomerName());
-        customer.setPassword(dto.getPassword());
-        customer.setRole(dto.getRole());
-        double money = dto.getMoney() > 0 ? dto.getMoney() : 0; // Ensure money is non-negative
-        customer.setMoney(money); // Set initial money to the validated value
-        return customer;
+        if (dto == null) {
+            return null;
+        }
+
+        CustomerInfo entity = new CustomerInfo();
+        entity.setCustomerName(dto.getCustomerName());
+        entity.setMoney(dto.getMoney());
+        
+        if (dto.getRole() != null) {
+            // SAFE MAP: Handles conversion to target enum safely regardless of your DTO property type definition
+            Set<Role> enumRoles = dto.getRole().stream()
+                    .map(roleObj -> {
+                        if (roleObj instanceof Role) {
+                            return (Role) roleObj;
+                        }
+                        return Role.valueOf(roleObj.toString().toUpperCase().trim());
+                    })
+                    .collect(Collectors.toSet());
+            entity.setRole(enumRoles); 
+        } else {
+            entity.setRole(new HashSet<>());
+        }
+        
+        return entity;
     }
 }

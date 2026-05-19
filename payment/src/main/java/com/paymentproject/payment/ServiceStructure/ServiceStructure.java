@@ -3,6 +3,7 @@ package com.paymentproject.payment.ServiceStructure;
 import java.util.List;
 
 import com.paymentproject.payment.Model.CustomerInfo;
+import com.paymentproject.payment.dto.CustomerDTO; // Imported the DTO
 
 /**
  * Service Structure Interface
@@ -60,20 +61,22 @@ public interface ServiceStructure {
     List<CustomerInfo> getAllInfo();
 
     /**
+     * FIXED: Return type changed to CustomerDTO to support safe caching in Redis
      * Get detailed information about a specific customer
      * 
      * @param id Customer's ID
-     * @return Customer's detailed information
+     * @return Customer's detailed information DTO
      */
-    CustomerInfo getMyDetails(int id);
+    CustomerDTO getMyDetails(int id);
 
     /**
+     * FIXED: Return type changed to CustomerDTO to prevent LazyInitializationExceptions
      * Get customer information by username
      * 
      * @param username Customer's username
-     * @return Customer's information
+     * @return Customer's information DTO
      */
-    CustomerInfo getUserByUsername(String username);
+    CustomerDTO getUserByUsername(String username);
 
     /**
      * Bulk add multiple customers to the system (admin only)
@@ -82,8 +85,4 @@ public interface ServiceStructure {
      * @return List of created customer entities with generated IDs
      */
     List<CustomerInfo> bulkAddCustomers(List<CustomerInfo> customers);
-
-    // void saveToRedis(String key, Object value);
-    // Object getFromRedis(String key);
-    // boolean existsInRedis(String key);
 }

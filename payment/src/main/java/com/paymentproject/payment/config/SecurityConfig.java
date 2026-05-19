@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,39 +16,19 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.paymentproject.payment.Filters.JwtFilter;
 import com.paymentproject.payment.Model.Role;
 import com.paymentproject.payment.userDetailService.CustomUserDetailService;
 
-/**
- * Security Configuration
- *
- * --- Bug fixed: /bank/auth/loginandgettoken was not in the permit list ---
- * The original config permitted "/bank/admin/createUser" (which should be
- * protected) but never permitted the login endpoint itself. Because
- * AuthController also had a class-level @PreAuthorize, unauthenticated users
- * could not reach the login endpoint at all, making login impossible.
- *
- * Fixed by:
- * 1. Permitting /bank/auth/loginandgettoken, /bank/auth/refresh publicly.
- *    Logout requires an authenticated user (you need to be logged in to log
- *    out), so it is intentionally left out of the permit list.
- * 2. Removing the public permit on /bank/admin/createUser — admin endpoints
- *    must require ADMIN role.
- *
- * --- Bug fixed: duplicate BCryptPasswordEncoder instantiation ---
- * BCryptPasswordEncoder was created inline in AP() and also as a field in
- * CustomerServiceImpl. It is now a @Bean here so it can be injected wherever
- * needed, ensuring a single instance with consistent configuration.
- *
- * --- Added: @EnableMethodSecurity ---
- * Required for @PreAuthorize annotations on controllers to take effect.
- * Without this, method-level security annotations are silently ignored.
- */
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity   // enables @PreAuthorize, @PostAuthorize, @Secured on methods
+@EnableMethodSecurity   
 public class SecurityConfig {
 
     @Autowired
@@ -59,6 +40,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // FIXED: Added active CORS filter tracking rules to link HttpOnly Cookies
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
 
@@ -70,21 +53,20 @@ public class SecurityConfig {
                     "/ws/**"
                 ).permitAll()
 
-                // Swagger UI — no authentication required (remove in production or protect)
+                // Swagger UI — no authentication required
                 .requestMatchers(
                     "/swagger-ui/**", "/swagger-ui.html",
                     "/swagger-ui/index.html", "/v3/api-docs/**"
                 ).permitAll()
 
-                // Authentication endpoints: login and token refresh are public.
-                // Logout is intentionally NOT here — it requires a valid session.
+                // Authentication endpoints: login, token refresh, and logout are managed here
                 .requestMatchers(
                     "/bank/auth/loginandgettoken",
-                    "/bank/auth/refresh"
+                    "/bank/auth/refresh",
+                    "/bank/auth/logout"
                 ).permitAll()
 
                 // Admin endpoints — ADMIN role enforced at the filter chain level.
-                // Individual methods may add further @PreAuthorize constraints.
                 .requestMatchers("/bank/admin/**").hasRole(Role.ADMIN.name())
 
                 // User endpoints — USER or ADMIN role required
@@ -107,14 +89,6 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
-    /**
-     * DaoAuthenticationProvider wires together:
-     * - UserDetailsService (loads user record from DB by username)
-     * - PasswordEncoder  (verifies the submitted password against the stored hash)
-     *
-     * Spring Security's AuthenticationManager delegates to this provider for
-     * username/password authentication.
-     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -123,16 +97,29 @@ public class SecurityConfig {
         return provider;
     }
 
-    /**
-     * Password encoder bean — defined once, injected wherever needed.
-     *
-     * Strength 12 is the current industry recommendation (2024+). Strength 10 is
-     * the Spring Security default and acceptable; 12 adds ~4x more hashing time,
-     * which is negligible at login but meaningful for brute-force resistance.
-     * Adjust based on your server's acceptable login latency.
-     */
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
+    }
+
+    /**
+     * FIXED: Added explicit Cross-Origin configuration properties.
+     * Instructs the browser to process incoming 'Set-Cookie' parameters securely.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Add your exact local/production frontend origin roots here
+        configuration.setAllowedOrigins(List.of("http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        
+        // CRITICAL: True flag permits transmitting secure HttpOnly cookies across origins
+        configuration.setAllowCredentials(true); 
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

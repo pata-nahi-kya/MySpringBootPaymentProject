@@ -2,6 +2,8 @@ package com.paymentproject.payment.Filters;
 
 import com.paymentproject.payment.ServiceStructureImplementation.JWTService;
 import com.paymentproject.payment.userDetailService.CustomUserDetailService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,54 +20,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * JWT Authentication Filter
- * 
- * This filter intercepts all HTTP requests and:
- * 1. Extracts JWT token from Authorization header
- * 2. Validates the token
- * 3. Loads user details if token is valid
- * 4. Sets up Spring Security context
- * 
- * Security features:
- * - Executes once per request
- * - Validates token format and signature
- * - Checks token expiration
- * - Sets up proper authentication context
- * 
- * Extends OncePerRequestFilter to ensure single execution per request
- */
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    /**
-     * Service for JWT operations (validation, extraction)
-     */
     @Autowired
     private JWTService jwtService;
 
-    /**
-     * Application context for accessing beans
-     * Used to get UserDetailsService dynamically
-     */
     @Autowired
     private CustomUserDetailService userDetailsService;
 
-    /**
-     * Main filter method that processes each request
-     * 
-     * Process flow:
-     * 1. Extract JWT from Authorization header
-     * 2. Extract username from token
-     * 3. Validate token and load user details
-     * 4. Set up security context if token is valid
-     * 
-     * @param request     HTTP request
-     * @param response    HTTP response
-     * @param filterChain Filter chain to execute
-     * @throws ServletException if filter processing fails
-     * @throws IOException      if I/O error occurs
-     */
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain)
@@ -78,14 +41,6 @@ public class JwtFilter extends OncePerRequestFilter {
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 token = authHeader.substring(7);
                 username = jwtService.extractUserName(token);
-                System.out.println("JWT Token extracted. Username: " + username);
-            // } else if (request.getParameter("token") != null) {
-            //     // For WebSocket connections via SockJS query parameters
-            //     token = request.getParameter("token");
-            //     username = jwtService.extractUserName(token);
-            //     System.out.println("JWT Token from parameter extracted. Username: " + username);
-            // } else {
-                
             }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -95,16 +50,40 @@ public class JwtFilter extends OncePerRequestFilter {
                             null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    
-                } else {
-                    System.err.println("JWT Token validation failed for user: " + username);
                 }
             }
+
+            // FIXED: This is the ONLY place where a successful filter execution proceeds
+            // forward
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException e) {
+            logger.warn("JWT validation failed: Access Token has expired -> " + e.getMessage());
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // HTTP 401
+            response.setContentType("application/json");
+            response.getWriter()
+                    .write("{\"error\": \"Access Token Expired\", \"message\": \"" + e.getMessage() + "\"}");
+
+            return; // Stops execution instantly. Does not fall through.
+
+        } catch (JwtException e) {
+            logger.error("JWT validation failed: Invalid Token format -> " + e.getMessage());
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // HTTP 401
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"error\": \"Invalid Token\", \"message\": \"The provided token signature is corrupted.\"}");
+
+            return; // Stops execution instantly.
+
         } catch (Exception e) {
-            System.err.println("Error in JwtFilter: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Unexpected error in JwtFilter: ", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // HTTP 500
+            return;
         }
 
-        filterChain.doFilter(request, response);
+        // FIXED: The duplicate filterChain.doFilter() call that was down here has been
+        // deleted!
     }
 }

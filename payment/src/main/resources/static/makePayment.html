@@ -134,7 +134,7 @@
     </div>
 
     <script>
-      const apiBase = "/bank";
+      
       const token = localStorage.getItem("jwtToken");
       const messageDiv = document.getElementById("message");
 
@@ -150,7 +150,7 @@
 
       async function refreshToken() {
         try {
-          const response = await axios.post(`${apiBase}/auth/refresh`, null, {
+          const response = await axios.post(`/bank/auth/refresh`, null, {
             withCredentials: true,
           });
           if (response.data?.token) {
@@ -197,7 +197,7 @@
           try {
             const userData = await sendRequest({
               method: "get",
-              url: `${apiBase}/user/current`,
+              url: `/bank/user/current`,
             });
 
             const payload = {
@@ -208,7 +208,7 @@
 
             await sendRequest({
               method: "post",
-              url: `${apiBase}/user/moneyTransfer`,
+              url: `/bank/user/moneyTransfer`,
               data: payload,
             });
 

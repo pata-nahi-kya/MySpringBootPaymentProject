@@ -129,37 +129,44 @@
       <div id="message" class="message"></div>
     </div>
 
-    <script>
-      const apiBase = "/bank";
-      const token = localStorage.getItem("jwtToken");
-      const messageDiv = document.getElementById("message");
+        <script>
+      const errorBanner = document.getElementById("message");
 
-      if (!token) {
+      // 1. Initial Access Check
+      if (!localStorage.getItem("jwtToken")) {
         window.location.href = "index.html";
       }
 
       function showMessage(text, type) {
-        messageDiv.textContent = text;
-        messageDiv.className = `message ${type}`;
-        messageDiv.style.display = "block";
+        errorBanner.textContent = text;
+        errorBanner.className = `message ${type}`;
+        errorBanner.style.display = "block";
       }
 
+      /**
+       * FIXED: Reads the refresh token automatically from HTTP cookies.
+       * Uses the updated backend accessToken mapping key.
+       */
       async function refreshToken() {
         try {
-          const response = await axios.post(`${apiBase}/auth/refresh`, null, {
-            withCredentials: true,
+          const response = await axios.post(`/bank/auth/refresh`, null, {
+            withCredentials: true // Transmits the secure HttpOnly cookie wrapper
           });
+
           if (response.data?.token) {
-            localStorage.setItem("jwtToken", response.data.token);
+            localStorage.setItem("jwtToken", response.data.accessToken);
             return true;
           }
         } catch (err) {
-          console.warn("Refresh failed", err);
+          console.error("Refresh sequence failed inside registration panel:", err);
         }
         logout();
         return false;
       }
 
+      /**
+       * Core Request Interceptor Engine
+       */
       async function sendRequest(config) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
@@ -168,6 +175,7 @@
           return response.data;
         } catch (error) {
           if (error.response?.status === 401) {
+            console.log("Access token expired during form submission. Renewing...");
             const refreshed = await refreshToken();
             if (refreshed) {
               config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
@@ -182,16 +190,15 @@
         .getElementById("registerForm")
         .addEventListener("submit", async function (event) {
           event.preventDefault();
-          messageDiv.style.display = "none";
+          errorBanner.style.display = "none";
 
-          const CustomerName = document
-            .getElementById("regUsername")
-            .value.trim();
+          // FIXED: Standardized to a clean lowercase customerName variable name matching the payload
+          const customerName = document.getElementById("regUsername").value.trim();
           const password = document.getElementById("regPassword").value.trim();
           const money = Number(document.getElementById("regMoney").value) || 0;
           const role = document.getElementById("regRole").value;
 
-          if (!CustomerName || !password || !role) {
+          if (!customerName || !password || !role) {
             showMessage("Please fill in all fields.", "error");
             return;
           }
@@ -199,21 +206,24 @@
           try {
             await sendRequest({
               method: "post",
-              url: `${apiBase}/admin/createUser`,
+              // FIXED: Added leading slash to ensure stable server endpoint tracking routing
+              url: `/bank/admin/createUser`, 
               data: {
-                CustomerName,
-                password,
-                money,
-                role: [role],
+                // FIXED: Property labels match your backend DTO property names exactly
+                customerName: customerName,
+                password: password,
+                money: money,
+                role: [role] 
               },
             });
 
             showMessage("User created successfully.", "success");
             document.getElementById("registerForm").reset();
           } catch (error) {
+            console.error("Registration error details:", error.response?.data || error.message);
             showMessage(
-              error.response?.data?.message || "Failed to create user.",
-              "error",
+              error.response?.data?.message || "Failed to create user. Ensure you have Admin privileges.",
+              "error"
             );
           }
         });
@@ -227,5 +237,6 @@
         window.location.href = "index.html";
       }
     </script>
+
   </body>
 </html>

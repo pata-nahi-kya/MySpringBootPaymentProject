@@ -91,4 +91,6 @@ public class RefreshTokenImplementation implements RefreshTokenStructure {
     public boolean isRefreshTokenExpired(String refreshToken) {
         return redisTemplate.opsForValue().get(refreshToken) == null;
     }
+
+    
 }

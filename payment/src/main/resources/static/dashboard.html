@@ -60,7 +60,7 @@
       }
       .secondary-button {
         background-color: #6f42c1;
-      }
+        }
       .secondary-button:hover {
         background-color: #5935a1;
       }
@@ -124,8 +124,7 @@
     </div>
 
     <script>
-      const apiBase = "/bank";
-      const token = localStorage.getItem("jwtToken");
+      let token = localStorage.getItem("jwtToken");
       const errorBanner = document.getElementById("errorBanner");
 
       if (!token) {
@@ -137,22 +136,32 @@
         errorBanner.style.display = message ? "block" : "none";
       }
 
+      /**
+       * FIXED: Reads the refresh token automatically from HTTP cookies.
+       * withCredentials: true forces the browser to send the HttpOnly cookie safely.
+       */
       async function refreshToken() {
         try {
-          const response = await axios.post(`${apiBase}/auth/refresh`, null, {
-            withCredentials: true,
+          const response = await axios.post(`/bank/auth/refresh`, null, {
+            withCredentials: true // Instructs browser to attach cookies to the cross-origin preflight path
           });
+
           if (response.data?.token) {
             localStorage.setItem("jwtToken", response.data.token);
             return true;
           }
         } catch (err) {
-          console.warn("Refresh token failed", err);
+          console.error("Secure cookie refresh swap failed:", err.response?.data || err.message);
         }
-        logout();
+        
+        // If refresh fails (cookie expired or missing), log out the user
+        localLogoutClean();
         return false;
       }
 
+      /**
+       * Core Interceptor Hook Execution Engine
+       */
       async function sendRequest(config) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
@@ -161,6 +170,7 @@
           return response.data;
         } catch (error) {
           if (error.response?.status === 401) {
+            console.log("Access token expired. Requesting silent cookie update...");
             const refreshed = await refreshToken();
             if (refreshed) {
               config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
@@ -172,21 +182,26 @@
         }
       }
 
+      /**
+       * Fetch current authenticated entity data metrics
+       */
       async function loadUserDetails() {
         try {
           const userData = await sendRequest({
             method: "get",
-            url: `${apiBase}/user/current`,
+            url: `/bank/user/current`,
+
           });
-          document.getElementById("userName").textContent =
-            userData.CustomerName || "N/A";
-          document.getElementById("accountBalance").textContent =
-            userData.money || "0";
-          document.getElementById("accountNumber").textContent =
-            userData.id || "N/A";
+          
+          document.getElementById("userName").textContent = userData.customerName || "N/A";
+          document.getElementById("accountBalance").textContent = userData.money || "0";
+          document.getElementById("accountNumber").textContent = userData.id || "N/A";
+          showError(""); 
         } catch (error) {
-          console.error("Load user failed", error);
-          showError("Failed to load profile. Please login again.");
+          console.error("Failed loading data details:", error);
+          showError(
+            error.response?.data?.message || "Failed to load user details. Please try again."
+          );
         }
       }
 
@@ -202,7 +217,22 @@
         window.location.href = "register.html";
       }
 
-      function logout() {
+      /**
+       * Full Security Logout execution path. Wipes cookie on backend first.
+       */
+      async function logout() {
+        try {
+          await axios.post('/bank/auth/logout', null, { withCredentials: true });
+        } catch (e) {
+          console.warn("Backend cookie clearing call failed or bypassed.");
+        }
+        localLogoutClean();
+      }
+
+      /**
+       * Fallback local storage reset function
+       */
+      function localLogoutClean() {
         localStorage.removeItem("jwtToken");
         window.location.href = "index.html";
       }

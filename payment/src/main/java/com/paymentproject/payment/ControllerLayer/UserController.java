@@ -1,7 +1,6 @@
 package com.paymentproject.payment.ControllerLayer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.paymentproject.payment.Model.CustomerInfo;
+
 import com.paymentproject.payment.ServiceStructureImplementation.CustomerServiceImpl;
 import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
@@ -50,7 +49,7 @@ import com.paymentproject.payment.dto.TransferDTO;
 @RequestMapping("/bank/user")
 public class UserController {
 
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
+   
 
     @Autowired
     private CustomerServiceImpl customerService;
@@ -87,12 +86,12 @@ public class UserController {
      * correct HTTP status (403 Forbidden) is returned to the client.
      *
      * @param id the account ID to delete
-     * @return 204 No Content
+     * @return 204 No Content if successful
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable int id) {
         String authenticatedUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        CustomerInfo authenticatedUser = customerService.getUserByUsername(authenticatedUsername);
+        CustomerDTO authenticatedUser = customerService.getUserByUsername(authenticatedUsername);
 
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                 .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
@@ -118,7 +117,7 @@ public class UserController {
     @PostMapping("/moneyTransfer")
     public CustomerDTO transferMoney(@RequestBody TransferDTO transferDTO) {
         String senderUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        CustomerInfo senderInfo = customerService.getUserByUsername(senderUsername);
+        CustomerDTO senderInfo = customerService.getUserByUsername(senderUsername);
 
         if (senderInfo.getId() != transferDTO.getSenderId()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -140,7 +139,7 @@ public class UserController {
      */
     @GetMapping("/getMyDetail/{id}")
     public CustomerDTO getMyDetails(@PathVariable int id) {
-        return customerMapper.toDto(customerService.getMyDetails(id));
+        return customerService.getMyDetails(id);
     }
 
     /**
@@ -155,13 +154,10 @@ public class UserController {
      */
     @GetMapping("/current")
     public CustomerDTO getCurrentUser() {
-        UserDetails userDetails = (UserDetails) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+        UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        System.out.println("Authenticated username: " + userDetails.getUsername());
 
-        log.debug("Fetching current user info for username={}", userDetails.getUsername());
-        CustomerInfo currentUserInfo = customerService.getUserByUsername(userDetails.getUsername());
-        return customerMapper.toDto(currentUserInfo);
+        CustomerDTO currentUserInfo = customerService.getUserByUsername(userDetails.getUsername());
+        return currentUserInfo;
     }
 }
