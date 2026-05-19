@@ -25,7 +25,7 @@ public class CustomerDTO {
     /**
      * Customer's username/name
      */
-    private String customerName;
+    private String CustomerName;
 
     /**
      * Customer's account balance

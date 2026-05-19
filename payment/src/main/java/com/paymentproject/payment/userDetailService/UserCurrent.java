@@ -5,12 +5,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.paymentproject.payment.Model.customerInfo;
+import com.paymentproject.payment.Model.CustomerInfo;
 
 public class UserCurrent implements UserDetails {
-    customerInfo ci;
+    CustomerInfo ci;
 
-    public UserCurrent(customerInfo ci) {
+    public UserCurrent(CustomerInfo ci) {
         this.ci = ci;
     }
 

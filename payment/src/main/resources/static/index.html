@@ -19,14 +19,13 @@
         padding: 40px;
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        width: 300px;
+        width: 340px;
       }
       h2 {
         text-align: center;
         margin-bottom: 20px;
       }
-      input,
-      select {
+      input {
         width: 100%;
         padding: 10px;
         margin: 10px 0;
@@ -46,176 +45,85 @@
       button:hover {
         background-color: #45a049;
       }
-      .form-section {
-        margin-bottom: 20px;
-      }
-      .form-toggle {
+      .link-row {
+        margin-top: 16px;
         text-align: center;
-        margin-bottom: 10px;
       }
-      .form-toggle button {
-        background: none;
-        border: none;
+      .link-row a {
         color: #4caf50;
-        cursor: pointer;
+        text-decoration: none;
+      }
+      .link-row a:hover {
         text-decoration: underline;
+      }
+      .error {
+        margin-top: 15px;
+        color: #d32f2f;
         font-size: 14px;
-      }
-      .form-toggle button:hover {
-        color: #45a049;
-      }
-      select {
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
+        min-height: 20px;
       }
     </style>
   </head>
   <body>
     <div class="login-container">
-      <h2 id="formTitle">Login</h2>
-      <div id="loginForm" class="form-section">
-        <form id="loginFormElement">
-          <input type="text" id="username" placeholder="Username" required />
-          <input
-            type="password"
-            id="password"
-            placeholder="Password"
-            required
-          />
-          <button type="submit">Login</button>
-        </form>
-      </div>
-
-      <div id="registerForm" class="form-section" style="display: none">
-        <form id="registerFormElement">
-          <input type="text" id="regUsername" placeholder="Username" required />
-          <input
-            type="password"
-            id="regPassword"
-            placeholder="Password"
-            required
-          />
-          <input
-            type="number"
-            id="regMoney"
-            placeholder="Initial Balance (optional)"
-            min="0"
-            value="0"
-          />
-          <select id="regRole" required>
-            <option value="">Select Role</option>
-            <option value="USER">User</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-          <button type="submit">Create Account</button>
-        </form>
-      </div>
-
-      <div class="form-toggle">
-        <button id="toggleBtn" type="button">Create New Account</button>
+      <h2>Login</h2>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+      <div class="link-row">
+        <span>Need admin access?</span>
+        <a href="register.html">Create user</a>
       </div>
       <div id="error" class="error"></div>
     </div>
 
-    <script>  
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      const baseUrl = "/bank/auth";
+
+      function showError(message) {
+        const errorElement = document.getElementById("error");
+        errorElement.textContent = message;
+      }
 
       document
-        .getElementById("toggleBtn")
-        .addEventListener("click", function () {
-          const loginForm = document.getElementById("loginForm");
-          const registerForm = document.getElementById("registerForm");
-          const formTitle = document.getElementById("formTitle");
-          const toggleBtn = document.getElementById("toggleBtn");
+        .getElementById("loginForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          showError("");
 
-          if (loginForm.style.display === "none") {
-            loginForm.style.display = "block";
-            registerForm.style.display = "none";
-            formTitle.textContent = "Login";
-            toggleBtn.textContent = "Create New Account";
-          } else {
-            loginForm.style.display = "none";
-            registerForm.style.display = "block";
-            formTitle.textContent = "Create Account";
-            toggleBtn.textContent = "Back to Login";
+          const username = document.getElementById("username").value.trim();
+          const password = document.getElementById("password").value.trim();
+
+          if (!username || !password) {
+            showError("Username and password are required.");
+            return;
           }
-          document.getElementById("error").textContent = "";
-        });
-
-      // Login form handler
-      document
-        .getElementById("loginFormElement")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const username = document.getElementById("username").value;
-          const password = document.getElementById("password").value;
 
           try {
-            const response = await fetch(
-              `/bank/admin/authenticate/${username}/${password}`,
+            const response = await axios.post(
+              `bank/auth/loginandgettoken`,
               {
-                method: "PUT",
-              },
+                CustomerName: username,
+                password: password
+              }
             );
-            const data = await response.json();
+            
 
-            if (data.token) {
-              localStorage.setItem("jwtToken", data.token);
-              localStorage.setItem("username", username); 
+            if (response.data?.token) {
+              localStorage.setItem("jwtToken", response.data.token);
+              localStorage.setItem("username", username);
               window.location.href = "dashboard.html";
             } else {
-              document.getElementById("error").textContent =
-                data.message || "Login failed";
+              showError(response.data?.message || "Login failed.");
             }
           } catch (error) {
-            document.getElementById("error").textContent = "An error occurred";
-          }
-        });
-
-      // Registration form handler
-      document
-        .getElementById("registerFormElement")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const username = document.getElementById("regUsername").value;
-          const password = document.getElementById("regPassword").value;
-          const money =
-            parseInt(document.getElementById("regMoney").value) || 0;
-          const role = document.getElementById("regRole").value;
-
-          try {
-            const response = await fetch("/bank/admin/createUser", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                customerName: username,
-                password: password,
-                money: money,
-                role: [role], 
-              }),
-            });
-
-            if (response.ok) {
-              const userData = await response.json();
-              document.getElementById("error").style.color = "green";
-              document.getElementById("error").textContent =
-                "Account created successfully! You can now login.";
-              // Switch back to login form after successful registration
-              setTimeout(() => {
-                document.getElementById("toggleBtn").click();
-              }, 2000);
-            } else {
-              const errorData = await response.json();
-              document.getElementById("error").textContent =
-                errorData.message || "Registration failed";
-            }
-          } catch (error) {
-            document.getElementById("error").textContent = "An error occurred";
+            showError(
+              error.response?.data?.message ||
+                "Unable to authenticate. Please try again.",
+            );
           }
         });
     </script>

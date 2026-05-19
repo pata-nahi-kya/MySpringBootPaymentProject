@@ -43,7 +43,9 @@ public class JWTService {
      * Secret key for JWT signing and verification
      * Generated once per service instance
      */
-    private String secretkey = "";
+    // get from env file
+    //@Value("${security.jwt.secret-key}")
+    private String secretkey = "123456789" ;
 
     /**
      * Constructor - Initializes the service with a secure secret key
@@ -85,7 +87,8 @@ public class JWTService {
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
-                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .signWith(Keys.hmacShaKeyFor(secretkey.getBytes()),
+                        SignatureAlgorithm.HS256)
                 .compact();
     }
 

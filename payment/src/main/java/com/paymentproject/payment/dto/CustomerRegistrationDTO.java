@@ -21,7 +21,7 @@ public class CustomerRegistrationDTO {
     /**
      * Customer's desired username/name
      */
-    private String customerName;
+    private String CustomerName;
 
     /**
      * Customer's password (will be hashed before storage)

@@ -1,5 +1,6 @@
 package com.paymentproject.payment.Model;
 
+import java.io.Serializable;
 import java.util.Set;
 
 import jakarta.persistence.CollectionTable;
@@ -36,7 +37,12 @@ import lombok.Data;
 @Entity
 @Table(name = "rakshit", schema = "paymentschema")
 @Data
-public class customerInfo {
+public class CustomerInfo implements Serializable {
+    /**
+     * Serial version UID for serialization compatibility
+     */
+    private static final long serialVersionUID = 1L;
+
     /**
      * Unique identifier for the customer
      * Auto-generated using identity strategy
@@ -49,7 +55,7 @@ public class customerInfo {
      * Customer's username/name in the system
      */
     @Column
-    String customerName;
+    String CustomerName;
 
     /**
      * Customer's account balance

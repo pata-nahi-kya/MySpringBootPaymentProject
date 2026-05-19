@@ -2,6 +2,7 @@ package com.paymentproject.payment;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 /**
  * Main Application Class for the Payment System
@@ -28,6 +29,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *                        configurations, and services
  */
 @SpringBootApplication
+@EnableCaching
 public class PaymentApplication {
 
 	/**

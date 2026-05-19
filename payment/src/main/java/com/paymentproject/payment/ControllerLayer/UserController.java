@@ -10,10 +10,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.paymentproject.payment.Model.customerInfo;
-import com.paymentproject.payment.ServiceStructureImplementation.ssImplementation;
+import com.paymentproject.payment.Model.CustomerInfo;
+import com.paymentproject.payment.ServiceStructureImplementation.JWTService;
+import com.paymentproject.payment.ServiceStructureImplementation.CustomerServiceImpl;
 import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
 import com.paymentproject.payment.dto.TransferDTO;
@@ -43,7 +42,10 @@ public class UserController {
      * Service layer implementation for business logic
      */
     @Autowired
-    ssImplementation ss;
+    CustomerServiceImpl customerService;
+
+    @Autowired
+    JWTService jwtService;
 
     /**
      * Mapper for converting between entities and DTOs
@@ -61,7 +63,7 @@ public class UserController {
     // this make no sense but i am just doing it for the sake of learning
     @PutMapping("/addMoney/{id}/{amount}")
     public CustomerDTO addMoney(@PathVariable int id, @PathVariable double amount) {
-        return customerMapper.toDto(ss.addMoney(amount, id));
+        return customerMapper.toDto(customerService.addMoney(amount, id));
     }
 
     /**
@@ -71,7 +73,22 @@ public class UserController {
      */
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable int id) {
-        ss.deleteUser(id);
+        // check if authenticated user is trying to delete their own account or if they
+        // are an admin
+        String authenticatedUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        CustomerInfo authenticatedUser = customerService.getUserByUsername(authenticatedUsername);
+        if (authenticatedUser == null) {
+            throw new RuntimeException("Authenticated user not found in database");
+        }
+        if (authenticatedUser.getId() != id && !SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            throw new RuntimeException("You can only delete your own account unless you are an admin");
+        }
+
+        // if the authenticated user is trying to delete their own account or if they
+        // are an admin, proceed with deletion
+
+        customerService.deleteUser(id);
     }
 
     /**
@@ -82,7 +99,17 @@ public class UserController {
      */
     @PostMapping("/moneyTransfer")
     public CustomerDTO transferMoney(@RequestBody TransferDTO transferDTO) {
-        return customerMapper.toDto(ss.transferMoney(
+
+        String senderUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        CustomerInfo senderInfo = customerService.getUserByUsername(senderUsername);
+        if (senderInfo == null) {
+            throw new RuntimeException("Authenticated user not found in database");
+        }
+        if (senderInfo.getId() != transferDTO.getSenderId()) {
+            throw new RuntimeException("Authenticated user does not match sender ID");
+        }
+
+        return customerMapper.toDto(customerService.transferMoney(
                 transferDTO.getAmount(),
                 transferDTO.getReceiverId(),
                 transferDTO.getSenderId()));
@@ -95,9 +122,9 @@ public class UserController {
      * @return User's account information as DTO
      */
     @GetMapping("/getMyDetail/{id}")
-    public CustomerDTO getMethodName(@PathVariable int id) {
+    public CustomerDTO getMyDetails(@PathVariable int id) {
 
-        return customerMapper.toDto(ss.getMydetail(id));
+        return customerMapper.toDto(customerService.getMyDetails(id));
     }
 
     /**
@@ -123,42 +150,28 @@ public class UserController {
      */
     @GetMapping("/current")
     public CustomerDTO getCurrentUser() {
+        try {
+            UserDetails userDetails = (UserDetails) SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getPrincipal();
+            String username = userDetails.getUsername();
+            System.out.println("Getting current user info for username: " + username);
 
-        UserDetails userDetails = (UserDetails) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal();
+            CustomerInfo currentUserInfo = customerService.getUserByUsername(username);
+            if (currentUserInfo == null) {
+                System.err.println("User not found in database for username: " + username);
+                throw new RuntimeException("User not found in database for username: " + username);
+            }
 
-        
-
-        String username = userDetails.getUsername();
-        System.out.println("Current user: " + username);
-
-        String key = "customer:" + username;
-        System.out.println("Checking Redis for key: " + key);
-
-        Object cached = ss.getFromRedis(key);
-
-        if (cached != null) {
-            System.out.println("Cache hit for key: " + key);
-
-            ObjectMapper mapper = new ObjectMapper();
-
-
-            CustomerDTO dto = mapper.convertValue(cached, CustomerDTO.class);
-            System.out.println("Returning cached data for user: " + username);
-
-            return dto;
+            CustomerDTO currentUser = customerMapper.toDto(currentUserInfo);
+            System.out.println("Successfully retrieved user: " + currentUser.getCustomerName());
+            return currentUser;
+        } catch (Exception e) {
+            System.err.println("Error in getCurrentUser: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to get current user: " + e.getMessage());
         }
-
-        System.out.println("Cache miss for key: " + key + ". Fetching from database.");
-        customerInfo currentUserInfo = ss.getUserByUsername(username);
-
-        CustomerDTO currentUser = customerMapper.toDto(currentUserInfo);
-
-        ss.saveToRedis(key, currentUser);
-
-        return currentUser;
     }
 
 }

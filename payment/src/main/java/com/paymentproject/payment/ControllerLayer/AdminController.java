@@ -4,16 +4,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+
 import org.springframework.web.bind.annotation.*;
 import com.paymentproject.payment.dto.CustomerDTO;
 import com.paymentproject.payment.dto.CustomerMapper;
 import com.paymentproject.payment.dto.CustomerRegistrationDTO;
-import com.paymentproject.payment.dto.AuthenticationResponseDTO;
-import com.paymentproject.payment.Model.customerInfo;
+
+import com.paymentproject.payment.Model.CustomerInfo;
 import com.paymentproject.payment.ServiceStructureImplementation.*;
 
 /**
@@ -39,19 +36,11 @@ public class AdminController {
      * Service implementation for business logic operations
      */
     @Autowired
-    ssImplementation ss;
-
-    /**
-     * Authentication manager used for credential verification
-     */
-    @Autowired
-    AuthenticationManager authenticationManager;
+    CustomerServiceImpl customerService;
 
     /**
      * Service for JWT token generation and validation
      */
-    @Autowired
-    JWTService sj;
 
     /**
      * Mapper for converting between entities and DTOs
@@ -77,7 +66,7 @@ public class AdminController {
      */
     @PostMapping("/createUser")
     public CustomerDTO createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
-        return customerMapper.toDto(ss.createUser(customerMapper.toEntity(registrationDTO)));
+        return customerMapper.toDto(customerService.createUser(customerMapper.toEntity(registrationDTO)));
     }
 
     /**
@@ -88,11 +77,12 @@ public class AdminController {
      */
     @PostMapping("/bulkAdd")
     public List<CustomerDTO> bulkAdd(@RequestBody List<CustomerRegistrationDTO> registrations) {
-        List<customerInfo> entities = registrations.stream()
+        List<CustomerInfo> entities = registrations.stream()
                 .map(customerMapper::toEntity)
                 .collect(Collectors.toList());
 
-        java.util.List<com.paymentproject.payment.Model.customerInfo> saved = ss.bulkAddCustomers(entities);
+        java.util.List<com.paymentproject.payment.Model.CustomerInfo> saved = customerService
+                .bulkAddCustomers(entities);
 
         return saved.stream().map(customerMapper::toDto).collect(Collectors.toList());
     }
@@ -104,7 +94,8 @@ public class AdminController {
      */
     @GetMapping("/getAllUser")
     public List<CustomerDTO> getAllInfo() {
-        return ss.getAllInfo().stream()
+        // let add pagination and sorting in future
+        return customerService.getAllInfo().stream()
                 .map(customerMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -116,30 +107,7 @@ public class AdminController {
      */
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable int id) {
-        ss.deleteUser(id);
-    }
-
-    /**
-     * Generate JWT token for user authentication
-     * 
-     * @param username Username for token generation
-     * @param password Password for verification (not used in current
-     *                 implementation)
-     * @return Authentication response containing JWT token
-     */
-    @PutMapping("/authenticate/{username}/{password}")
-    public AuthenticationResponseDTO getTokenOfJWT(@PathVariable String username, @PathVariable String password) {
-        try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password));
-            if (authentication.isAuthenticated()) {
-                String token = sj.generateToken(username);
-                return new AuthenticationResponseDTO(token, "Authentication successful");
-            }
-        } catch (AuthenticationException ex) {
-            return new AuthenticationResponseDTO(null, "Invalid credentials");
-        }
-        return new AuthenticationResponseDTO(null, "Authentication failed");
+        customerService.deleteUser(id);
     }
 
 }

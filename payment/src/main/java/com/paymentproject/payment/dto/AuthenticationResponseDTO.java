@@ -25,9 +25,14 @@ public class AuthenticationResponseDTO {
      * JWT token for authenticated session
      */
     private String token;
+    private String refreshToken ; 
 
     /**
      * Status message about authentication result
      */
     private String message;
+
+    
+
+    
 }

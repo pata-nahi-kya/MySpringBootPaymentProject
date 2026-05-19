@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Payment System - Make Payment</title>
+    <title>Payment System - Create User</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
       body {
@@ -15,12 +15,12 @@
         height: 100vh;
         margin: 0;
       }
-      .payment-container {
+      .register-container {
         background-color: white;
         padding: 40px;
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        width: 400px;
+        width: 380px;
       }
       h1 {
         text-align: center;
@@ -28,15 +28,16 @@
         color: #333;
       }
       .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 18px;
       }
       label {
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         color: #555;
         font-weight: bold;
       }
-      input {
+      input,
+      select {
         width: 100%;
         padding: 12px;
         border: 1px solid #ddd;
@@ -44,41 +45,29 @@
         font-size: 16px;
         box-sizing: border-box;
       }
-      input:focus {
-        outline: none;
-        border-color: #4caf50;
-        box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
-      }
-      .button-group {
-        display: flex;
-        gap: 10px;
-        margin-top: 30px;
-      }
       button {
-        flex: 1;
+        width: 100%;
         padding: 12px;
         border: none;
         border-radius: 4px;
         font-size: 16px;
         cursor: pointer;
-        transition: background-color 0.3s;
-      }
-      .submit-btn {
         background-color: #4caf50;
         color: white;
+        transition: background-color 0.3s;
       }
-      .submit-btn:hover {
+      button:hover {
         background-color: #45a049;
       }
-      .cancel-btn {
-        background-color: #f44336;
-        color: white;
+      .secondary-button {
+        background-color: #6f42c1;
+        margin-top: 10px;
       }
-      .cancel-btn:hover {
-        background-color: #d32f2f;
+      .secondary-button:hover {
+        background-color: #5935a1;
       }
       .message {
-        margin-top: 20px;
+        margin-top: 15px;
         padding: 10px;
         border-radius: 4px;
         text-align: center;
@@ -97,39 +86,46 @@
     </style>
   </head>
   <body>
-    <div class="payment-container">
-      <h1>Make a Payment</h1>
-      <form id="paymentForm">
+    <div class="register-container">
+      <h1>Create User</h1>
+      <form id="registerForm">
         <div class="form-group">
-          <label for="receiverId">Receiver Account ID:</label>
+          <label for="regUsername">Username</label>
+          <input type="text" id="regUsername" placeholder="Username" required />
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Password</label>
           <input
-            type="number"
-            id="receiverId"
-            placeholder="Enter receiver's account ID"
+            type="password"
+            id="regPassword"
+            placeholder="Password"
             required
           />
         </div>
-
         <div class="form-group">
-          <label for="amount">Amount ($):</label>
+          <label for="regMoney">Initial Balance</label>
           <input
             type="number"
-            id="amount"
-            placeholder="Enter amount to transfer"
-            min="1"
-            step="1"
-            required
+            id="regMoney"
+            placeholder="Initial balance"
+            min="0"
+            value="0"
           />
         </div>
-
-        <div class="button-group">
-          <button type="button" class="cancel-btn" onclick="goBack()">
-            Cancel
-          </button>
-          <button type="submit" class="submit-btn">Process Payment</button>
+        <div class="form-group">
+          <label for="regRole">Role</label>
+          <select id="regRole" required>
+            <!-- radio button  -->
+            <option value="">Select Role</option>
+            <option value="USER">User</option>
+            <option value="ADMIN">Admin</option>
+          </select>
         </div>
+        <button type="submit">Create User</button>
       </form>
-
+      <button class="secondary-button" onclick="goBack()">
+        Back to Dashboard
+      </button>
       <div id="message" class="message"></div>
     </div>
 
@@ -142,9 +138,9 @@
         window.location.href = "index.html";
       }
 
-      function showMessage(text, status) {
+      function showMessage(text, type) {
         messageDiv.textContent = text;
-        messageDiv.className = `message ${status}`;
+        messageDiv.className = `message ${type}`;
         messageDiv.style.display = "block";
       }
 
@@ -175,8 +171,7 @@
             const refreshed = await refreshToken();
             if (refreshed) {
               config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
-              const retryResponse = await axios(config);
-              return retryResponse.data;
+              return (await axios(config)).data;
             }
           }
           throw error;
@@ -184,44 +179,42 @@
       }
 
       document
-        .getElementById("paymentForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
+        .getElementById("registerForm")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
           messageDiv.style.display = "none";
 
-          const receiverId = Number(
-            document.getElementById("receiverId").value,
-          );
-          const amount = Number(document.getElementById("amount").value);
+          const CustomerName = document
+            .getElementById("regUsername")
+            .value.trim();
+          const password = document.getElementById("regPassword").value.trim();
+          const money = Number(document.getElementById("regMoney").value) || 0;
+          const role = document.getElementById("regRole").value;
+
+          if (!CustomerName || !password || !role) {
+            showMessage("Please fill in all fields.", "error");
+            return;
+          }
 
           try {
-            const userData = await sendRequest({
-              method: "get",
-              url: `${apiBase}/user/current`,
-            });
-
-            const payload = {
-              senderId: Number(userData.id),
-              receiverId,
-              amount,
-            };
-
             await sendRequest({
               method: "post",
-              url: `${apiBase}/user/moneyTransfer`,
-              data: payload,
+              url: `${apiBase}/admin/createUser`,
+              data: {
+                CustomerName,
+                password,
+                money,
+                role: [role],
+              },
             });
 
-            showMessage("Payment successful! Transfer completed.", "success");
-            document.getElementById("paymentForm").reset();
-            setTimeout(() => {
-              window.location.href = "dashboard.html";
-            }, 2500);
+            showMessage("User created successfully.", "success");
+            document.getElementById("registerForm").reset();
           } catch (error) {
-            const message =
-              error.response?.data?.message ||
-              "An error occurred. Please try again.";
-            showMessage(message, "error");
+            showMessage(
+              error.response?.data?.message || "Failed to create user.",
+              "error",
+            );
           }
         });
 

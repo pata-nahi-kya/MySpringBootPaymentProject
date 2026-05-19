@@ -10,7 +10,7 @@ import com.paymentproject.payment.Model.CustomerInfo;
  * Extends JpaRepository to provide CRUD operations for CustomerInfo entities.
  * Custom query methods follow Spring Data naming conventions.
  */@Repository
-public interface repository extends JpaRepository<CustomerInfo, Integer> {
+public interface CustomerRepository extends JpaRepository<CustomerInfo, Integer> {
     // Custom query method to find customer by name , we just have to write the
     // method name in a specific format and spring will automatically create the
     // query for us ex. findBy<fieldname>

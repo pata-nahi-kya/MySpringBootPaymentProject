@@ -2,9 +2,7 @@ package com.paymentproject.payment.ServiceStructure;
 
 import java.util.List;
 
-
-
-import com.paymentproject.payment.Model.customerInfo;
+import com.paymentproject.payment.Model.CustomerInfo;
 
 /**
  * Service Structure Interface
@@ -23,20 +21,20 @@ public interface ServiceStructure {
     /**
      * Create a new user in the system
      * 
-     * @param cs Customer information for the new user
+     * @param customer Customer information for the new user
      * @return Created customer entity with generated ID
      */
-    customerInfo createUser(customerInfo cs);
+    CustomerInfo createUser(CustomerInfo customer);
 
     /**
      * Transfer money between two customer accounts
      * 
-     * @param amount Amount to transfer
-     * @param ri     Receiver's account ID
-     * @param si     Sender's account ID
+     * @param amount     Amount to transfer
+     * @param receiverId Receiver's account ID
+     * @param senderId   Sender's account ID
      * @return Updated sender's account information
      */
-    customerInfo transferMoney(double amount, int ri, int si);
+    CustomerInfo transferMoney(double amount, int receiverId, int senderId);
 
     /**
      * Add money to a customer's account
@@ -45,7 +43,7 @@ public interface ServiceStructure {
      * @param id     Customer's account ID
      * @return Updated customer information
      */
-    customerInfo addMoney(double amount, int id);
+    CustomerInfo addMoney(double amount, int id);
 
     /**
      * Delete a user from the system
@@ -59,7 +57,7 @@ public interface ServiceStructure {
      * 
      * @return List of all customer information
      */
-    List<customerInfo> getAllInfo();
+    List<CustomerInfo> getAllInfo();
 
     /**
      * Get detailed information about a specific customer
@@ -67,7 +65,7 @@ public interface ServiceStructure {
      * @param id Customer's ID
      * @return Customer's detailed information
      */
-    customerInfo getMydetail(int id);
+    CustomerInfo getMyDetails(int id);
 
     /**
      * Get customer information by username
@@ -75,7 +73,7 @@ public interface ServiceStructure {
      * @param username Customer's username
      * @return Customer's information
      */
-    customerInfo getUserByUsername(String username);
+    CustomerInfo getUserByUsername(String username);
 
     /**
      * Bulk add multiple customers to the system (admin only)
@@ -83,9 +81,9 @@ public interface ServiceStructure {
      * @param customers List of customer entities to create
      * @return List of created customer entities with generated IDs
      */
-    List<customerInfo> bulkAddCustomers(List<customerInfo> customers);
+    List<CustomerInfo> bulkAddCustomers(List<CustomerInfo> customers);
 
-    void saveToRedis(String key, Object value);
-    Object getFromRedis(String key);
-    boolean existsInRedis(String key);
+    // void saveToRedis(String key, Object value);
+    // Object getFromRedis(String key);
+    // boolean existsInRedis(String key);
 }

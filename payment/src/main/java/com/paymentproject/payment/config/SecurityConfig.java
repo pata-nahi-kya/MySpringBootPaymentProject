@@ -39,13 +39,13 @@ public class SecurityConfig {
      * User Details Service for loading user-specific data
      */
     @Autowired
-    CustomUserDetailService myuserDetialService;
+    CustomUserDetailService customUserDetailsService;
 
     /**
      * Custom JWT filter for token-based authentication
      */
     @Autowired
-    JwtFilter jf;
+    JwtFilter jwtFilter;
 
     // this file is used to configure the security of the application
     // it is used to configure the security filter chain
@@ -72,15 +72,18 @@ public class SecurityConfig {
      */
 
     @Bean
-    public SecurityFilterChain SFC(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints - accessible without authentication
                         .requestMatchers("/", "/login", "/index.html", "/dashboard.html", "/makePayment.html",
-                                "/chatsection.html", "/ws/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html", "/v3/api-docs/**").permitAll()
+                                "/chatsection.html", "/ws/**")
+                        .permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html",
+                                "/v3/api-docs/**")
+                        .permitAll()
                         .requestMatchers("/bank/admin/createUser").permitAll()
-                        .requestMatchers("/bank/admin/authenticate/**").permitAll()
+                        .requestMatchers("/bank/auth/loginandgettoken/**").permitAll()
 
                         // Admin endpoints - require ADMIN role
                         .requestMatchers("/bank/admin/**").hasRole(Role.ADMIN.name())
@@ -92,7 +95,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
 
                 )
-                .addFilterBefore(jf, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         // JWT filter only applies to protected endpoints, not public ones
         // Public endpoints like "/" and "/login" don't need JWT validation
 
@@ -139,7 +142,7 @@ public class SecurityConfig {
     public AuthenticationProvider AP() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(new BCryptPasswordEncoder(10)); // Strong password hashing
-        provider.setUserDetailsService(myuserDetialService); // Custom user details service
+        provider.setUserDetailsService(customUserDetailsService); // Custom user details service
         return provider;
     }
 

@@ -2,7 +2,7 @@ package com.paymentproject.payment.dto;
 
 import org.springframework.stereotype.Component;
 
-import com.paymentproject.payment.Model.customerInfo;
+import com.paymentproject.payment.Model.CustomerInfo;
 
 /**
  * Customer Entity-DTO Mapper
@@ -27,7 +27,7 @@ public class CustomerMapper {
      * @param customer The customer entity to convert
      * @return DTO containing non-sensitive customer information
      */
-    public CustomerDTO toDto(customerInfo customer) {
+    public CustomerDTO toDto(CustomerInfo customer) {
         CustomerDTO dto = new CustomerDTO();
         dto.setId(customer.getId());
         dto.setCustomerName(customer.getCustomerName());
@@ -42,8 +42,8 @@ public class CustomerMapper {
      * @param dto The registration DTO to convert
      * @return New customer entity with initial values set
      */
-    public customerInfo toEntity(CustomerRegistrationDTO dto) {
-        customerInfo customer = new customerInfo();
+    public CustomerInfo toEntity(CustomerRegistrationDTO dto) {
+        CustomerInfo customer = new CustomerInfo();
         customer.setCustomerName(dto.getCustomerName());
         customer.setPassword(dto.getPassword());
         customer.setRole(dto.getRole());

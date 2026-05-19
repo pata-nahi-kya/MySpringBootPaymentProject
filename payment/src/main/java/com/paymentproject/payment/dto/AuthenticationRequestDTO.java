@@ -17,7 +17,7 @@ public class AuthenticationRequestDTO {
     /**
      * Username for authentication
      */
-    private String customerName;
+    private String CustomerName;
 
     /**
      * Password for authentication
