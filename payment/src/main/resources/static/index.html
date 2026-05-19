@@ -104,12 +104,14 @@
 
           try {
             const response = await axios.post(
-              `bank/auth/loginandgettoken`,
+              `/bank/auth/loginandgettoken`,
               {
                 CustomerName: username,
                 password: password
               }
             );
+
+            console.log("Login response:", response.data);
             
 
             if (response.data?.token) {

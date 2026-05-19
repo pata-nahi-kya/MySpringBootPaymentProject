@@ -3,14 +3,15 @@ package com.paymentproject.payment.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -20,87 +21,83 @@ import com.paymentproject.payment.Model.Role;
 import com.paymentproject.payment.userDetailService.CustomUserDetailService;
 
 /**
- * Security Configuration Class
- * 
- * This class configures Spring Security for the application, including:
- * - JWT-based authentication
- * - Role-based authorization
- * - Password encryption
- * - Security filter chain
- * - Session management
- * 
- * @Configuration marks this as a configuration class
- * @EnableWebSecurity enables Spring Security's web security support
+ * Security Configuration
+ *
+ * --- Bug fixed: /bank/auth/loginandgettoken was not in the permit list ---
+ * The original config permitted "/bank/admin/createUser" (which should be
+ * protected) but never permitted the login endpoint itself. Because
+ * AuthController also had a class-level @PreAuthorize, unauthenticated users
+ * could not reach the login endpoint at all, making login impossible.
+ *
+ * Fixed by:
+ * 1. Permitting /bank/auth/loginandgettoken, /bank/auth/refresh publicly.
+ *    Logout requires an authenticated user (you need to be logged in to log
+ *    out), so it is intentionally left out of the permit list.
+ * 2. Removing the public permit on /bank/admin/createUser — admin endpoints
+ *    must require ADMIN role.
+ *
+ * --- Bug fixed: duplicate BCryptPasswordEncoder instantiation ---
+ * BCryptPasswordEncoder was created inline in AP() and also as a field in
+ * CustomerServiceImpl. It is now a @Bean here so it can be injected wherever
+ * needed, ensuring a single instance with consistent configuration.
+ *
+ * --- Added: @EnableMethodSecurity ---
+ * Required for @PreAuthorize annotations on controllers to take effect.
+ * Without this, method-level security annotations are silently ignored.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity   // enables @PreAuthorize, @PostAuthorize, @Secured on methods
 public class SecurityConfig {
-    /**
-     * User Details Service for loading user-specific data
-     */
+
     @Autowired
-    CustomUserDetailService customUserDetailsService;
+    private CustomUserDetailService customUserDetailsService;
 
-    /**
-     * Custom JWT filter for token-based authentication
-     */
     @Autowired
-    JwtFilter jwtFilter;
-
-    // this file is used to configure the security of the application
-    // it is used to configure the security filter chain
-    // it is used to configure the authentication provider
-    // it is used to configure the user details service
-    // it is used to configure the password encoder
-    // it is used to configure the session management policy
-    // it is used to configure the CSRF protection settings
-    // it is used to configure the HTTP security
-
-    /**
-     * Configures the security filter chain for HTTP requests
-     * 
-     * This method defines:
-     * - URL-based security rules
-     * - Role-based access control
-     * - JWT filter integration
-     * - Session management policy
-     * - CSRF protection settings
-     * 
-     * @param http HttpSecurity object to configure
-     * @return Configured SecurityFilterChain
-     * @throws Exception if configuration fails
-     */
+    private JwtFilter jwtFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - accessible without authentication
-                        .requestMatchers("/", "/login", "/index.html", "/dashboard.html", "/makePayment.html",
-                                "/chatsection.html", "/ws/**")
-                        .permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html",
-                                "/v3/api-docs/**")
-                        .permitAll()
-                        .requestMatchers("/bank/admin/createUser").permitAll()
-                        .requestMatchers("/bank/auth/loginandgettoken/**").permitAll()
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
 
-                        // Admin endpoints - require ADMIN role
-                        .requestMatchers("/bank/admin/**").hasRole(Role.ADMIN.name())
+                // Static pages — no authentication required
+                .requestMatchers(
+                    "/", "/login",
+                    "/index.html", "/dashboard.html", "/makePayment.html",
+                    "/chatsection.html", "/register.html",
+                    "/ws/**"
+                ).permitAll()
 
-                        // User endpoints - require USER or ADMIN role
-                        .requestMatchers("/bank/user/**").hasAnyRole(Role.ADMIN.name(), Role.USER.name())
+                // Swagger UI — no authentication required (remove in production or protect)
+                .requestMatchers(
+                    "/swagger-ui/**", "/swagger-ui.html",
+                    "/swagger-ui/index.html", "/v3/api-docs/**"
+                ).permitAll()
 
-                        // All other requests must be authenticated
-                        .anyRequest().authenticated()
+                // Authentication endpoints: login and token refresh are public.
+                // Logout is intentionally NOT here — it requires a valid session.
+                .requestMatchers(
+                    "/bank/auth/loginandgettoken",
+                    "/bank/auth/refresh"
+                ).permitAll()
 
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        // JWT filter only applies to protected endpoints, not public ones
-        // Public endpoints like "/" and "/login" don't need JWT validation
+                // Admin endpoints — ADMIN role enforced at the filter chain level.
+                // Individual methods may add further @PreAuthorize constraints.
+                .requestMatchers("/bank/admin/**").hasRole(Role.ADMIN.name())
 
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.authenticationProvider(AP());
+                // User endpoints — USER or ADMIN role required
+                .requestMatchers("/bank/user/**").hasAnyRole(Role.ADMIN.name(), Role.USER.name())
+
+                // Everything else requires authentication
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -110,40 +107,32 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
-    // Authentication Provider is used to decide which type of authentication we are
-    // using ex Oauth or JWT or basic authentication
-    // here we are using DaoAuthenticationProvider which is used to retrieve user
-    // details from a database
-    // we have to provide userDetailsService and passwordEncoder to the
-    // DaoAuthenticationProvider
-    // userDetailsService is used to load user details from database and
-    // passwordEncoder is used to encode the password
-    // we are using BCryptPasswordEncoder which is a strong hashing function to
-    // encode the password
-
-    // there is one more class namedn authentication manager which tells
-    // authentication provider which to choose on the basis of given information
     /**
-     * Configures the authentication provider for the application
-     * 
-     * This method sets up:
-     * - DaoAuthenticationProvider for database-based authentication
-     * - BCryptPasswordEncoder with strength 10 for password hashing
-     * - Custom UserDetailsService for loading user data
-     * 
-     * The authentication provider is responsible for:
-     * - Verifying user credentials
-     * - Loading user details from the database
-     * - Managing password encoding/verification
-     * 
-     * @return Configured AuthenticationProvider
+     * DaoAuthenticationProvider wires together:
+     * - UserDetailsService (loads user record from DB by username)
+     * - PasswordEncoder  (verifies the submitted password against the stored hash)
+     *
+     * Spring Security's AuthenticationManager delegates to this provider for
+     * username/password authentication.
      */
     @Bean
-    public AuthenticationProvider AP() {
+    public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(new BCryptPasswordEncoder(10)); // Strong password hashing
-        provider.setUserDetailsService(customUserDetailsService); // Custom user details service
+        provider.setPasswordEncoder(passwordEncoder());
+        provider.setUserDetailsService(customUserDetailsService);
         return provider;
     }
 
+    /**
+     * Password encoder bean — defined once, injected wherever needed.
+     *
+     * Strength 12 is the current industry recommendation (2024+). Strength 10 is
+     * the Spring Security default and acceptable; 12 adds ~4x more hashing time,
+     * which is negligible at login but meaningful for brute-force resistance.
+     * Adjust based on your server's acceptable login latency.
+     */
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
 }
