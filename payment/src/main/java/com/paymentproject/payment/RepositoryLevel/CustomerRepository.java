@@ -16,4 +16,8 @@ public interface CustomerRepository extends JpaRepository<CustomerInfo, Integer>
     // query for us ex. findBy<fieldname>
     CustomerInfo findByCustomerName(String username);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByCustomerName(String customerName);
+
 }

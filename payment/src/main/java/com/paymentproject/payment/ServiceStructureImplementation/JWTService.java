@@ -7,6 +7,7 @@ import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -18,44 +19,37 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JWTService {
 
-    /**
-     * Token validity = 30 minutes
-     */
-    private static final long ACCESS_TOKEN_VALIDITY_MS = 1000L * 60 ;
+    private static final long ACCESS_TOKEN_VALIDITY_MS = 1000L * 60 * 30;
 
-    /**
-     * Fixed secret key
-     *
-     * IMPORTANT:
-     * HS256 requires at least 32 bytes key length.
-     * "123456789" alone is too short and will throw WeakKeyException.
-     *
-     * So we expand it to a valid 32+ byte secret.
-     */
-    private static final String SECRET =
-            "12345678912345678912345678912345";
+    private final String secret;
 
-    /**
-     * Single reusable signing key.
-     * No regeneration on restart.
-     */
-    private final SecretKey key =
-            Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final SecretKey key;
+
+    public JWTService(@Value("${security.jwt.secret-key:}") String secret) {
+        this.secret = secret;
+
+        if (secret == null || secret.trim().length() < 32) {
+            System.err.println(
+                    "Provided secret key is too short or missing. Generating a secure random fallback key.");
+            System.out.println(secret);
+            this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        } else {
+            // Safe to use your custom key because it meets the 32+ character requirement
+            this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        }
+    }
 
     /**
      * Generate JWT token
      */
     public String generateToken(String username) {
-
         Map<String, Object> claims = new HashMap<>();
 
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(
-                        new Date(System.currentTimeMillis()
-                                + ACCESS_TOKEN_VALIDITY_MS))
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_VALIDITY_MS))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -70,10 +64,7 @@ public class JWTService {
     /**
      * Extract any claim
      */
-    private <T> T extractClaim(
-            String token,
-            Function<Claims, T> claimResolver) {
-
+    private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);
     }
@@ -82,7 +73,6 @@ public class JWTService {
      * Parse and validate token
      */
     private Claims extractAllClaims(String token) {
-
         return Jwts.parser()
                 .verifyWith(key)
                 .build()
@@ -93,14 +83,9 @@ public class JWTService {
     /**
      * Validate token
      */
-    public boolean validateToken(
-            String token,
-            UserDetails userDetails) {
-
+    public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUserName(token);
-
-        return username.equals(userDetails.getUsername())
-                && !isTokenExpired(token);
+        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
     /**

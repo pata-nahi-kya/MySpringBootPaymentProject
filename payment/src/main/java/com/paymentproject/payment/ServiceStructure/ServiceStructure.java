@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.paymentproject.payment.Model.CustomerInfo;
 import com.paymentproject.payment.dto.CustomerDTO; // Imported the DTO
+import com.paymentproject.payment.dto.OtpVerificationDTO;
 
 /**
  * Service Structure Interface
@@ -25,7 +26,7 @@ public interface ServiceStructure {
      * @param customer Customer information for the new user
      * @return Created customer entity with generated ID
      */
-    CustomerInfo createUser(CustomerInfo customer);
+    void initiateRegister(CustomerInfo customerInfo);
 
     /**
      * Transfer money between two customer accounts
@@ -70,7 +71,8 @@ public interface ServiceStructure {
     CustomerDTO getMyDetails(int id);
 
     /**
-     * FIXED: Return type changed to CustomerDTO to prevent LazyInitializationExceptions
+     * FIXED: Return type changed to CustomerDTO to prevent
+     * LazyInitializationExceptions
      * Get customer information by username
      * 
      * @param username Customer's username
@@ -85,4 +87,6 @@ public interface ServiceStructure {
      * @return List of created customer entities with generated IDs
      */
     List<CustomerInfo> bulkAddCustomers(List<CustomerInfo> customers);
+
+    boolean verifyAndRegister(OtpVerificationDTO verificationDTO);
 }

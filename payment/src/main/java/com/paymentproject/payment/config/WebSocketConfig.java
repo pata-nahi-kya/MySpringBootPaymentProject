@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import com.paymentproject.payment.component.JWTChannelInterceptor;
+
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -22,7 +22,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     // private CustomUserDetailService userDetailsService;
 
     @Autowired
-    private JWTChannelInterceptor jwtChannelInterceptor;
+    private com.paymentproject.payment.Interceptor.JWTChannelInterceptor jwtChannelInterceptor;
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {

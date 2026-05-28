@@ -11,10 +11,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.paymentproject.payment.Model.CustomerInfo;
+import com.paymentproject.payment.ServiceStructureImplementation.CustomerServiceImpl;
 import com.paymentproject.payment.ServiceStructureImplementation.JWTService;
 import com.paymentproject.payment.ServiceStructureImplementation.RefreshTokenImplementation;
 import com.paymentproject.payment.dto.AuthenticationRequestDTO;
 import com.paymentproject.payment.dto.AuthenticationResponseDTO;
+import com.paymentproject.payment.dto.CustomerDTO;
+import com.paymentproject.payment.dto.CustomerMapper;
+import com.paymentproject.payment.dto.CustomerRegistrationDTO;
+import com.paymentproject.payment.dto.OtpVerificationDTO;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +34,12 @@ public class AuthController {
 
     @Autowired
     private JWTService jwtService;
+
+    @Autowired
+    private CustomerServiceImpl customerService;
+
+    @Autowired
+    private CustomerMapper customerMapper;
 
     @Autowired
     private RefreshTokenImplementation refreshTokenService;
@@ -112,4 +124,29 @@ public class AuthController {
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .build();
     }
+
+    /**
+     * Create a single new user.
+     *
+     * @param registrationDTO registration data for the new user
+     * @return 201 Created with the created user's DTO
+     */
+    @PostMapping("/register/initiate")
+    public ResponseEntity<CustomerDTO> createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
+        CustomerInfo entity = customerMapper.toEntity(registrationDTO);
+        CustomerDTO created = customerMapper.toDto(entity);
+        customerService.initiateRegister(entity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PostMapping("/register/verify")
+    public ResponseEntity<String> verifyRegister(@RequestBody OtpVerificationDTO verificationDTO) {
+        boolean isSuccess = customerService.verifyAndRegister(verificationDTO);
+        if (isSuccess) {
+            return ResponseEntity.ok("Account successfully verified and created!");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or incorrect OTP.");
+    }
+
+    
 }

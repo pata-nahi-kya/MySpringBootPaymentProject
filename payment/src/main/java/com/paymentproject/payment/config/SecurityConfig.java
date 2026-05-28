@@ -63,7 +63,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/bank/auth/loginandgettoken",
                     "/bank/auth/refresh",
-                    "/bank/auth/logout"
+                    "/bank/auth/logout",
+                    "/bank/auth/register/initiate",
+                    "/bank/auth/register/verify"
                 ).permitAll()
 
                 // Admin endpoints — ADMIN role enforced at the filter chain level.

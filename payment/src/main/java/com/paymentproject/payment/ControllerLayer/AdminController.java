@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +42,7 @@ import com.paymentproject.payment.dto.CustomerRegistrationDTO;
  */
 @RestController
 @RequestMapping("/bank/admin")
-@PreAuthorize("hasRole('ADMIN')")
+//@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     @Autowired
@@ -56,19 +56,7 @@ public class AdminController {
         return "Welcome to the Admin Panel";
     }
 
-    /**
-     * Create a single new user.
-     *
-     * @param registrationDTO registration data for the new user
-     * @return 201 Created with the created user's DTO
-     */
-    @PostMapping("/createUser")
-    public ResponseEntity<CustomerDTO> createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
-        CustomerInfo entity = customerMapper.toEntity(registrationDTO);
-        entity.setPassword(registrationDTO.getPassword());
-        CustomerDTO created = customerMapper.toDto(customerService.createUser(entity));
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
+    
 
     /**
      * Create multiple users in a single request.

@@ -27,9 +27,10 @@ public class CustomerMapper {
         }
 
         CustomerDTO dto = new CustomerDTO();
-        dto.setId(customer.getId());
         dto.setCustomerName(customer.getCustomerName()); 
         dto.setMoney(customer.getMoney());
+        dto.setEmail(customer.getEmail());
+        dto.setId(customer.getId());
         
         if (customer.getRole() != null) {
             Set<String> safeRoles = customer.getRole().stream()
@@ -55,6 +56,8 @@ public class CustomerMapper {
         CustomerInfo entity = new CustomerInfo();
         entity.setCustomerName(dto.getCustomerName());
         entity.setMoney(dto.getMoney());
+        entity.setEmail(dto.getEmail());
+        entity.setPassword(dto.getPassword());
         
         if (dto.getRole() != null) {
             // SAFE MAP: Handles conversion to target enum safely regardless of your DTO property type definition

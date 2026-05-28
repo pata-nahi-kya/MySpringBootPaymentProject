@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Payment System - Create User</title>
+    <title>Payment System - Register Account</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
       body {
@@ -36,8 +36,7 @@
         color: #555;
         font-weight: bold;
       }
-      input,
-      select {
+      input, select {
         width: 100%;
         padding: 12px;
         border: 1px solid #ddd;
@@ -60,11 +59,11 @@
         background-color: #45a049;
       }
       .secondary-button {
-        background-color: #6f42c1;
+        background-color: #6c757d;
         margin-top: 10px;
       }
       .secondary-button:hover {
-        background-color: #5935a1;
+        background-color: #5a6268;
       }
       .message {
         margin-top: 15px;
@@ -83,59 +82,69 @@
         color: #721c24;
         border: 1px solid #f5c6cb;
       }
+      /* Visual state helper classes */
+      .hidden {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
     <div class="register-container">
-      <h1>Create User</h1>
+      <h1 id="panelTitle">Create Account</h1>
+      
+      <!-- STEP 1: Main User Details Form -->
       <form id="registerForm">
         <div class="form-group">
           <label for="regUsername">Username</label>
           <input type="text" id="regUsername" placeholder="Username" required />
         </div>
         <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <input type="email" id="regEmail" placeholder="example@gmail.com" required />
+        </div>
+        <div class="form-group">
           <label for="regPassword">Password</label>
-          <input
-            type="password"
-            id="regPassword"
-            placeholder="Password"
-            required
-          />
+          <input type="password" id="regPassword" placeholder="Password" required />
         </div>
         <div class="form-group">
           <label for="regMoney">Initial Balance</label>
-          <input
-            type="number"
-            id="regMoney"
-            placeholder="Initial balance"
-            min="0"
-            value="0"
-          />
+          <input type="number" id="regMoney" placeholder="Initial balance" min="0" value="0" />
         </div>
         <div class="form-group">
           <label for="regRole">Role</label>
           <select id="regRole" required>
-            <!-- radio button  -->
             <option value="">Select Role</option>
             <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
         </div>
-        <button type="submit">Create User</button>
+        <button type="submit">Send Verification OTP</button>
       </form>
-      <button class="secondary-button" onclick="goBack()">
-        Back to Dashboard
-      </button>
+
+      <!-- STEP 2: OTP Verification Form (Hidden Initially) -->
+      <form id="otpForm" class="hidden">
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+          An active verification code was dispatched to your email address.
+        </p>
+        <div class="form-group">
+          <label for="verificationOtp">6-Digit OTP Code</label>
+          <input type="text" id="verificationOtp" placeholder="Enter OTP" maxlength="6" required />
+        </div>
+        <button type="submit">Verify & Create Account</button>
+      </form>
+
+      <button class="secondary-button" onclick="goToLogin()">Back to Login</button>
       <div id="message" class="message"></div>
     </div>
 
-        <script>
+    <script>
       const errorBanner = document.getElementById("message");
-
-      // 1. Initial Access Check
-      if (!localStorage.getItem("jwtToken")) {
-        window.location.href = "index.html";
-      }
+      const registerForm = document.getElementById("registerForm");
+      const otpForm = document.getElementById("otpForm");
+      const panelTitle = document.getElementById("panelTitle");
+      
+      // Temporary in-memory variable to track user email across the multi-step form execution
+      let cachedEmailAddress = "";
 
       function showMessage(text, type) {
         errorBanner.textContent = text;
@@ -143,100 +152,89 @@
         errorBanner.style.display = "block";
       }
 
-      /**
-       * FIXED: Reads the refresh token automatically from HTTP cookies.
-       * Uses the updated backend accessToken mapping key.
-       */
-      async function refreshToken() {
+      // STEP 1 Submission handler: POST user details to unauthenticated endpoint
+      registerForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        errorBanner.style.display = "none";
+
+        const customerName = document.getElementById("regUsername").value.trim();
+        const email = document.getElementById("regEmail").value.trim().toLowerCase();
+        const password = document.getElementById("regPassword").value.trim();
+        const money = Number(document.getElementById("regMoney").value) || 0;
+        const role = document.getElementById("regRole").value;
+
+        if (!customerName || !email || !password || !role) {
+          showMessage("Please fill in all fields.", "error");
+          return;
+        }
+
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!gmailRegex.test(email)) {
+          showMessage("Please enter a valid Gmail address (e.g., user@gmail.com).", "error");
+          return;
+        }
+
         try {
-          const response = await axios.post(`/bank/auth/refresh`, null, {
-            withCredentials: true // Transmits the secure HttpOnly cookie wrapper
+          // Clean public URL target bypassing the secure JWT /admin dashboard middleware context
+          await axios.post("/bank/auth/register/initiate", {
+            customerName: customerName,
+            email: email,
+            password: password,
+            money: money,
+            role: [role]
           });
 
-          if (response.data?.token) {
-            localStorage.setItem("jwtToken", response.data.accessToken);
-            return true;
-          }
-        } catch (err) {
-          console.error("Refresh sequence failed inside registration panel:", err);
-        }
-        logout();
-        return false;
-      }
+          // Cache email address for Step 2 execution context
+          cachedEmailAddress = email;
 
-      /**
-       * Core Request Interceptor Engine
-       */
-      async function sendRequest(config) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
-        try {
-          const response = await axios(config);
-          return response.data;
+          // Swap UI View States dynamically
+          registerForm.classList.add("hidden");
+          otpForm.classList.remove("hidden");
+          panelTitle.textContent = "Verify OTP";
+          
+          showMessage("Verification code sent to your email!", "success");
         } catch (error) {
-          if (error.response?.status === 401) {
-            console.log("Access token expired during form submission. Renewing...");
-            const refreshed = await refreshToken();
-            if (refreshed) {
-              config.headers.Authorization = `Bearer ${localStorage.getItem("jwtToken")}`;
-              return (await axios(config)).data;
-            }
-          }
-          throw error;
+          console.error("Initiation error details:", error.response?.data || error.message);
+          showMessage(error.response?.data?.message || "Failed to initiate registration process.", "error");
         }
-      }
+      });
 
-      document
-        .getElementById("registerForm")
-        .addEventListener("submit", async function (event) {
-          event.preventDefault();
-          errorBanner.style.display = "none";
+      // STEP 2 Submission handler: POST OTP verification token
+      otpForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        errorBanner.style.display = "none";
 
-          // FIXED: Standardized to a clean lowercase customerName variable name matching the payload
-          const customerName = document.getElementById("regUsername").value.trim();
-          const password = document.getElementById("regPassword").value.trim();
-          const money = Number(document.getElementById("regMoney").value) || 0;
-          const role = document.getElementById("regRole").value;
+        const otpCode = document.getElementById("verificationOtp").value.trim();
 
-          if (!customerName || !password || !role) {
-            showMessage("Please fill in all fields.", "error");
-            return;
-          }
+        if (!otpCode || otpCode.length !== 6) {
+          showMessage("Please provide a valid 6-digit verification code.", "error");
+          return;
+        }
 
-          try {
-            await sendRequest({
-              method: "post",
-              // FIXED: Added leading slash to ensure stable server endpoint tracking routing
-              url: `/bank/admin/createUser`, 
-              data: {
-                // FIXED: Property labels match your backend DTO property names exactly
-                customerName: customerName,
-                password: password,
-                money: money,
-                role: [role] 
-              },
-            });
+        try {
+          await axios.post("/bank/auth/register/verify", {
+            email: cachedEmailAddress,
+            otp: otpCode
+          });
 
-            showMessage("User created successfully.", "success");
-            document.getElementById("registerForm").reset();
-          } catch (error) {
-            console.error("Registration error details:", error.response?.data || error.message);
-            showMessage(
-              error.response?.data?.message || "Failed to create user. Ensure you have Admin privileges.",
-              "error"
-            );
-          }
-        });
+          showMessage("Account verified and created successfully!", "success");
+          otpForm.reset();
+          registerForm.reset();
+          
+          // Redirect to login dashboard panel safely after timeout
+          setTimeout(() => {
+            goToLogin();
+          }, 2000);
 
-      function goBack() {
-        window.location.href = "dashboard.html";
-      }
+        } catch (error) {
+          console.error("OTP verification error details:", error.response?.data || error.message);
+          showMessage(error.response?.data?.message || "Invalid or expired OTP token.", "error");
+        }
+      });
 
-      function logout() {
-        localStorage.removeItem("jwtToken");
+      function goToLogin() {
         window.location.href = "index.html";
       }
     </script>
-
   </body>
 </html>
