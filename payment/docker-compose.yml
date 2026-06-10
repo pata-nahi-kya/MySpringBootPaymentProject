@@ -1,48 +1,55 @@
 services:
   mysql:
     image: mysql:8
-
     container_name: payment-mysql
-
-    restart: no
-
+    restart: "no"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: paymentschema
-
     ports:
       - "3307:3306"
-
     volumes:
       - mysql_data:/var/lib/mysql
+    # Added healthcheck to verify MySQL is fully initialized
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
     container_name: payment-redis
-    restart: no
+    restart: "no"
     ports:
       - "6379:6379"
+    # Added healthcheck to verify Redis is ready
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
 
-  # app:
-  #   build: .
-
-  #   container_name: payment-app
-
-  #   restart: always
-
-  #   ports:
-  #     - "8080:8080"
-
-  #   depends_on:
-  #     - mysql
-  #     - redis
-
-  #   environment:
-  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentschema
-
-  #     SPRING_DATASOURCE_USERNAME: root
-
-  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+  app:
+    build: .
+    container_name: payment-app
+    restart: always
+    ports:
+      - "8080:8080"
+    # Updated to wait for services to be HEALTHY, not just started
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentschema
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SECURITY_JWT_SECRET_KEY: ${SECRET_KEY}
+      # Tip: If your app uses Redis, make sure it points to the container name
+      SPRING_DATA_REDIS_HOST: redis 
+      SPRING_DATA_REDIS_PORT: 6379
 
 volumes:
   mysql_data:
