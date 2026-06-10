@@ -56,7 +56,8 @@ public class SecurityConfig {
                 // Swagger UI — no authentication required
                 .requestMatchers(
                     "/swagger-ui/**", "/swagger-ui.html",
-                    "/swagger-ui/index.html", "/v3/api-docs/**"
+                    "/swagger-ui/index.html", "/v3/api-docs/**",
+                    "/actuator/**"
                 ).permitAll()
 
                 // Authentication endpoints: login, token refresh, and logout are managed here

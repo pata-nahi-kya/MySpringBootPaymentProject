@@ -25,6 +25,7 @@ public class JWTService {
 
     private final SecretKey key;
 
+    @SuppressWarnings("deprecation")
     public JWTService(@Value("${security.jwt.secret-key:}") String secret) {
         this.secret = secret;
 
@@ -42,6 +43,7 @@ public class JWTService {
     /**
      * Generate JWT token
      */
+    @SuppressWarnings("deprecation")
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
 

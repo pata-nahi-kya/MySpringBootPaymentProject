@@ -46,6 +46,7 @@ public class RefreshTokenImplementation implements RefreshTokenStructure {
      * @param username the authenticated user's username
      * @return the generated refresh token string
      */
+    @SuppressWarnings("null")
     @Override
     public String createRefreshToken(String username) {
         String refreshToken = UUID.randomUUID().toString();
@@ -64,6 +65,7 @@ public class RefreshTokenImplementation implements RefreshTokenStructure {
      */
     @Override
     public String validateRefreshToken(String refreshToken) {
+        @SuppressWarnings("null")
         Object username = redisTemplate.opsForValue().get(refreshToken);
         return username != null ? username.toString() : null;
     }
@@ -73,6 +75,7 @@ public class RefreshTokenImplementation implements RefreshTokenStructure {
      *
      * @param refreshToken the token to invalidate
      */
+    @SuppressWarnings("null")
     @Override
     public void deleteRefreshToken(String refreshToken) {
         redisTemplate.delete(refreshToken);
@@ -87,6 +90,7 @@ public class RefreshTokenImplementation implements RefreshTokenStructure {
      * @param refreshToken the token to check
      * @return true if the token is absent from Redis (expired or invalid)
      */
+    @SuppressWarnings("null")
     @Override
     public boolean isRefreshTokenExpired(String refreshToken) {
         return redisTemplate.opsForValue().get(refreshToken) == null;

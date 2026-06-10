@@ -19,6 +19,7 @@ public class ChatController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @SuppressWarnings("null")
     @MessageMapping("/private-message")
     public void handlePrivateMessage(ChatMessage message , Principal principal) {
         String sender = principal.getName();

@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException; // Added this import
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,6 +59,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle BadCredentialsException — thrown by Spring Security when login fails.
+     * This replaces the massive terminal stack trace with a clean, single-line log.
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleBadCredentialsException(
+            BadCredentialsException ex, HttpServletRequest request) {
+
+        // Clean, single-line terminal log
+        log.warn("Authentication failed on {}: Invalid username or password.", request.getRequestURI());
+
+        // Structured, standard 401 Unauthorized JSON response for the client
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED,
+                "Invalid username or password.",
+                request.getRequestURI());
+    }
+
+    /**
      * Catch-all handler for unexpected exceptions. Logs the full stack trace
      * server-side but returns a generic 500 message to the client so internal
      * details are not exposed.
@@ -88,4 +108,3 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(body);
     }
 }
-

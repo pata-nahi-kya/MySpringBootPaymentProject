@@ -15,11 +15,13 @@ import java.time.Duration;
 @Configuration
 public class RedisConfig {
 
+    @SuppressWarnings("null")
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         // A standard Generic serializer handles pure DTO tracking automatically
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
 
+       
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofHours(1)) // Cache values expire in 1 hour
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))

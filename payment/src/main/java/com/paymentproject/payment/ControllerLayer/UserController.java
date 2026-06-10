@@ -103,7 +103,7 @@ public class UserController {
                 transferDTO.getAmount(),
                 transferDTO.getReceiverId(),
                 transferDTO.getSenderId()));
-                
+
         return ResponseEntity.ok(transferResult);
     }
 
@@ -132,5 +132,10 @@ public class UserController {
 
         CustomerDTO currentUserInfo = customerService.getUserByUsername(userDetails.getUsername());
         return ResponseEntity.ok(currentUserInfo);
+    }
+
+    @GetMapping("/test")
+    public String test() {
+        return "API Working";
     }
 }

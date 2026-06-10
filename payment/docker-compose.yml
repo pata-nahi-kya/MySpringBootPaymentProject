@@ -4,7 +4,7 @@ services:
 
     container_name: payment-mysql
 
-    restart: always
+    restart: no
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
@@ -19,9 +19,9 @@ services:
   redis:
     image: redis:7
     container_name: payment-redis
+    restart: no
     ports:
       - "6379:6379"
-    
 
   # app:
   #   build: .

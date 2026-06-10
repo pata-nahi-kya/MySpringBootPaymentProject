@@ -55,6 +55,7 @@ public class AuthController {
             String refreshToken = refreshTokenService.createRefreshToken(authRequest.getCustomerName());
 
             // FIXED: Build a secure, HttpOnly, SameSite cookie wrapper
+            @SuppressWarnings("null")
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true) // Stops JavaScript from reading the cookie
                     .secure(true) // Set to true in production when using HTTPS
@@ -97,6 +98,7 @@ public class AuthController {
 
         String newAccessToken = jwtService.generateToken(username);
         String refreshToken = refreshTokenService.createRefreshToken(username);
+        @SuppressWarnings("null")
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true) // Stops JavaScript from reading the cookie
                 .secure(true) // Set to true in production when using HTTPS
