@@ -134,11 +134,13 @@ public class AuthController {
      * @return 201 Created with the created user's DTO
      */
     @PostMapping("/register/initiate")
-    public ResponseEntity<CustomerDTO> createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
+    public ResponseEntity<String> createUser(@RequestBody CustomerRegistrationDTO registrationDTO) {
+        // Convert incoming DTO to a CustomerInfo entity and start the OTP-based registration flow.
+        // Do not map to a CustomerDTO yet because the customer is not persisted until OTP verification.
         CustomerInfo entity = customerMapper.toEntity(registrationDTO);
-        CustomerDTO created = customerMapper.toDto(entity);
         customerService.initiateRegister(entity);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body("Registration initiated; check email for OTP.");
     }
 
     @PostMapping("/register/verify")
